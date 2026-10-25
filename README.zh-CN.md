@@ -1,23 +1,24 @@
-# sponsored-by
+<h1 align="center">sponsored-by</h1>
 
-> 一个梗图生成器：写一句台词，得到一张「假赞助商滚过屏幕」的卡片。全程在浏览器里跑——无后端、不上传、不用注册。
+<p align="center">写一句台词，得到一张「假赞助商滚过屏幕」的卡片。<br>
+全程在浏览器里跑 —— 无后端、不上传、不用注册。</p>
 
-[![CI](https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml/badge.svg)](https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/)
-[![No backend](https://img.shields.io/badge/backend-none-1c6b3c.svg)](#)
+<p align="center">
+  <img src="docs/demo.gif" alt="演示：输入一句台词后，卡片底部滚出一行假赞助商" width="600">
+</p>
 
-[English](README.md) | **简体中文**
+<p align="center">
+  <a href="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml"><img src="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-57606a.svg" alt="许可证：MIT"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6.svg" alt="TypeScript：strict"></a>
+  <br>
+  <sub><a href="#快速开始">快速开始</a> · <a href="#导出格式">导出格式</a> · <a href="#实现结构">实现结构</a> · <a href="README.md">English</a> | <b>简体中文</b></sub>
+</p>
+
+> [!WARNING]
+> **恶搞作品 —— 与任何品牌无关。** 不含真实品牌 logo 与商标，也不暗示任何真实赞助关系。你输入什么名字是你自己的选择，默认内容是 emoji。如果某个品牌希望移除相关内容，开个 issue 就能处理。
 
 ---
-
-> ### ⚠️ 恶搞作品 —— 与任何品牌无关
->
-> 本项目是对「Sponsored by X」这个梗的二创，**不含任何真实品牌 logo 与商标**，也不暗示任何真实的赞助关系。你输入什么名字是你自己的选择，默认内容是 emoji。项目免费、无广告、不挂捐赠链接。如果某个品牌希望移除相关内容，开个 issue 就能处理。
-
----
-
-![演示：循环滚动的 SPONSORED BY 卡片](docs/demo.gif)
 
 ## 这是什么
 

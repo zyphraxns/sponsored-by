@@ -1,23 +1,24 @@
-# sponsored-by
+<h1 align="center">sponsored-by</h1>
 
-> A parody meme generator: type a line, get a card where a fake sponsor scrolls across the screen. Runs entirely in your browser — no server, no upload, no account.
+<p align="center">Type a line, get a card where a fake sponsor scrolls across it.<br>
+Runs entirely in your browser — no server, no upload, no account.</p>
 
-[![CI](https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml/badge.svg)](https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/)
-[![No backend](https://img.shields.io/badge/backend-none-1c6b3c.svg)](#)
+<p align="center">
+  <img src="docs/demo.gif" alt="Demo: typing a line and getting a card where a fake sponsor scrolls underneath" width="600">
+</p>
 
-**English** | [简体中文](README.zh-CN.md)
+<p align="center">
+  <a href="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml"><img src="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-57606a.svg" alt="License: MIT"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6.svg" alt="TypeScript: strict"></a>
+  <br>
+  <sub><a href="#quick-start">Quick start</a> · <a href="#export-formats">Export formats</a> · <a href="#how-it-works">How it works</a> · <b>English</b> | <a href="README.zh-CN.md">简体中文</a></sub>
+</p>
+
+> [!WARNING]
+> **Parody — not affiliated with anyone.** No real brand logos, no trademarks, no implied sponsorship. The names you type are yours to choose; the default content is emoji. If you are a brand and want something removed, open an issue and it will be handled.
 
 ---
-
-> ### ⚠️ Parody — not affiliated with anyone
->
-> This is a parody of the "Sponsored by X" meme format. It ships **no real brand logos**, no trademarks, and implies **no real sponsorship relationship**. Names you type in are yours to choose; the default content is emoji. The project is free, ad-free, and has no donation links. If you are a brand and want something removed, open an issue and it will be handled.
-
----
-
-![Demo: a looping SPONSORED BY card](docs/demo.gif)
 
 ## What it is
 
