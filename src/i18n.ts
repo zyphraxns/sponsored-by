@@ -33,6 +33,22 @@ export interface UiStrings {
   languageLabel: string;
   ratioLabel: string;
   platformLabel: string;
+  /** 图标按钮标签 */
+  iconLabel: string;
+  /** 标题输入框标签 */
+  titleLabel: string;
+  /** 图标面板标题 */
+  iconPanelTitle: string;
+  /** 图标面板搜索占位 */
+  iconPanelSearch: string;
+  /** 图标面板加载中 */
+  iconPanelLoading: string;
+  /** 图标面板清空按钮 */
+  iconPanelClear: string;
+  /** 图标面板关闭按钮 */
+  iconPanelClose: string;
+  /** 图标面板底部提示 */
+  iconPanelHint: string;
   exportGif: string;
   exportMp4: string;
   exportPng: string;
@@ -56,6 +72,14 @@ export const UI: Record<Locale, UiStrings> = {
     languageLabel: 'Language',
     ratioLabel: 'Ratio',
     platformLabel: 'Post to',
+    iconLabel: 'Icons',
+    titleLabel: 'Title',
+    iconPanelTitle: 'Choose icons',
+    iconPanelSearch: 'Search brands…',
+    iconPanelLoading: 'Loading…',
+    iconPanelClear: 'Clear',
+    iconPanelClose: 'Close',
+    iconPanelHint: 'Click to toggle. simple-icons 3000+ brand marks, single-color SVG.',
     exportGif: 'Export GIF',
     exportMp4: 'Export MP4',
     exportPng: 'Export PNG',
@@ -82,6 +106,14 @@ export const UI: Record<Locale, UiStrings> = {
     languageLabel: '语言',
     ratioLabel: '比例',
     platformLabel: '发到',
+    iconLabel: '图标',
+    titleLabel: '标题',
+    iconPanelTitle: '选择图标',
+    iconPanelSearch: '搜索品牌…',
+    iconPanelLoading: '加载中…',
+    iconPanelClear: '清空',
+    iconPanelClose: '关闭',
+    iconPanelHint: '点击切换选中状态。simple-icons 3000+ 品牌矢量，单色 SVG。',
     exportGif: '导出 GIF',
     exportMp4: '导出 MP4',
     exportPng: '导出 PNG',

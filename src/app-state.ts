@@ -1,11 +1,17 @@
 import { DEFAULT_TEMPLATE_ID, resolveTemplate } from './templates';
-import type { Locale, Ratio, SceneState, TickerLayer } from './core/types';
+import type { Locale, Ratio, SceneState, TickerItem, TickerLayer } from './core/types';
 
 export interface DefaultStateOptions {
   templateId?: string;
   variantId?: string;
   locale?: Locale;
   ratio?: Ratio;
+  /** 用户选中的图标列表；重建 state 时透传，避免切换版式时图标被清空 */
+  icons?: TickerItem[];
+  /** 用户文案覆盖；同上 */
+  text?: SceneState['text'];
+  /** 用户色板覆盖；同上 */
+  palette?: SceneState['palette'];
 }
 
 /**
@@ -21,11 +27,11 @@ export function createDefaultState(options: DefaultStateOptions = {}): SceneStat
   return {
     template,
     locale: options.locale ?? 'en',
-    text: {},
+    text: options.text ?? {},
     ratio: options.ratio ?? '1:1',
     rows: ticker?.rows ?? 3,
     speed: 1,
-    icons: [],
-    palette: {},
+    icons: options.icons ?? [],
+    palette: options.palette ?? {},
   };
 }

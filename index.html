@@ -163,6 +163,90 @@
         .stage { animation: none; }
         .btn, .seg { transition: none; }
       }
+      .icon-panel {
+        position: fixed;
+        inset: 0;
+        background: rgb(26 26 24 / 60%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+      }
+      .icon-panel[hidden] { display: none; }
+      .icon-panel__inner {
+        background: var(--surface-raised);
+        color: var(--ink);
+        width: min(88vmin, 720px);
+        max-height: 86vh;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgb(20 20 18 / 28%);
+      }
+      .icon-panel__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--hairline);
+      }
+      .icon-search {
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 14px;
+        border: none;
+        border-bottom: 1px solid var(--hairline);
+        background: var(--surface);
+        color: var(--ink);
+        width: 100%;
+      }
+      .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+        gap: 6px;
+        padding: 14px 18px;
+        overflow-y: auto;
+        max-height: 60vh;
+      }
+      .icon-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 4px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+        font-size: 10px;
+        color: var(--ink-quiet);
+        text-align: center;
+        transition: border-color 120ms ease, background 120ms ease;
+      }
+      .icon-cell:hover { background: #fff; }
+      .icon-cell svg { width: 32px; height: 32px; }
+      .icon-cell[aria-pressed="true"] { border-color: var(--ink); background: #fff; }
+      .icon-cell .emoji { font-size: 28px; line-height: 1; }
+      .icon-panel__footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px;
+        border-top: 1px solid var(--hairline);
+      }
+      .icon-panel__hint { font-size: 11px; color: var(--ink-quiet); }
+      .icon-cell svg path { fill: var(--ink); }
+      .title-input {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        border: 1px solid var(--hairline);
+        border-radius: 6px;
+        background: var(--surface-raised);
+        color: var(--ink);
+      }
     </style>
   </head>
   <body>
@@ -192,8 +276,31 @@
             <button class="seg" type="button" data-ratio="16:9">16:9</button>
           </div>
         </div>
+        <div class="field">
+          <span class="field-label" id="label-icons">图标</span>
+          <button class="btn" type="button" id="icon-btn" title="选择图标">图标</button>
+        </div>
+        <div class="field">
+          <span class="field-label" id="label-title">标题</span>
+          <input class="title-input" id="title-input" type="text" spellcheck="false" autocomplete="off" />
+        </div>
       </div>
     </header>
+    <!-- 图标选择面板 -->
+    <div class="icon-panel" id="icon-panel" role="dialog" aria-modal="true" aria-labelledby="icon-panel-title" hidden>
+      <div class="icon-panel__inner">
+        <div class="icon-panel__head">
+          <span class="field-label" id="icon-panel-title">选择图标</span>
+          <button class="btn" type="button" id="icon-close">关闭</button>
+        </div>
+        <input class="icon-search" id="icon-search" type="search" placeholder="搜索品牌…" autocomplete="off" />
+        <div class="icon-grid" id="icon-grid" role="listbox"></div>
+        <div class="icon-panel__footer">
+          <span class="icon-panel__hint" id="icon-hint"></span>
+          <button class="btn" type="button" id="icon-clear">清空</button>
+        </div>
+      </div>
+    </div>
     <main><div class="stage" id="canvas"></div></main>
     <footer>
       <div class="meta">

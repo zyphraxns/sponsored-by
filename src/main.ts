@@ -11,7 +11,7 @@ import {
 } from './core/presets';
 import type { PlatformId } from './core/presets';
 import { ui } from './i18n';
-import type { Locale, Ratio, SceneState } from './core/types';
+import type { Locale, Ratio, SceneState, TickerItem } from './core/types';
 import { exportGif, gifFilename } from './exporters/gif';
 import { exportPng } from './exporters/png';
 import { pngFilename, svgFilename, svgFileContent, svgToBlob } from './exporters/svg';
@@ -23,6 +23,12 @@ interface Selection {
   locale: Locale;
   ratio: Ratio;
   platform: PlatformId;
+  /** 用户选中的图标列表（空 = 用模板默认） */
+  icons: TickerItem[];
+  /** 用户文案覆盖 */
+  text: SceneState['text'];
+  /** 用户色板覆盖 */
+  palette: SceneState['palette'];
 }
 
 let sel: Selection = {
@@ -30,6 +36,9 @@ let sel: Selection = {
   locale: 'en',
   ratio: '1:1',
   platform: 'none',
+  icons: [],
+  text: {},
+  palette: {},
 };
 let state: SceneState = createDefaultState(sel);
 let loopSeconds = loopSecondsFor(state);
@@ -162,14 +171,22 @@ function refreshChrome(): void {
     ['label-layout', t.layoutLabel],
     ['label-language', t.languageLabel],
     ['label-ratio', t.ratioLabel],
+    ['label-icons', t.iconLabel],
+    ['label-title', t.titleLabel],
+    ['icon-panel-title', t.iconPanelTitle],
     ['export-gif', t.exportGif],
     ['export-mp4', t.exportMp4],
     ['export-png', t.exportPng],
     ['export-svg', t.exportSvg],
+    ['icon-close', t.iconPanelClose],
+    ['icon-clear', t.iconPanelClear],
   ] as const) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   }
+
+  if (iconSearch) iconSearch.placeholder = t.iconPanelSearch;
+  if (iconHint) iconHint.textContent = t.iconPanelHint;
 
   renderPlatformOptions(state.locale);
   if (platformSelect) platformSelect.value = sel.platform;
@@ -189,12 +206,29 @@ function refreshChrome(): void {
     mp4Btn.title = webCodecsOk ? t.mp4LimitHint : t.mp4Unsupported;
   }
 
+  // 标题输入框：显示当前模板的默认文案（用户覆盖优先）
+  const titleLayer = state.template.layers.find((l) => l.type === 'text');
+  if (titleInput && titleLayer) {
+    const defaultText = state.text[titleLayer.id]?.[state.locale] ?? titleLayer.default[state.locale];
+    if (document.activeElement !== titleInput) titleInput.value = defaultText;
+  }
+
   refreshMeta();
 }
 
-function apply(partial: Partial<Selection>): void {
+/** 切换版式 / 语言 / 比例时重建 state。用户内容（icons/text/palette）透传，
+ *  避免换版式时把已选图标和文案清空——切换的是版式，不是用户的作品。 */
+function apply(partial: Partial<Selection & { icons?: TickerItem[]; text?: SceneState['text']; palette?: SceneState['palette'] }>): void {
   sel = { ...sel, ...partial };
-  state = createDefaultState(sel);
+  state = createDefaultState({
+    templateId: sel.templateId,
+    variantId: sel.variantId,
+    locale: sel.locale,
+    ratio: sel.ratio,
+    icons: partial.icons ?? sel.icons,
+    text: partial.text ?? sel.text,
+    palette: sel.palette,
+  });
   loopSeconds = loopSecondsFor(state);
   start = performance.now(); // 切换后从 t=0 起播，动作干净
   if (reducedMotion) renderAt(0);
@@ -228,6 +262,129 @@ for (const btn of ratioBtns) {
     if (ratio && ratio !== state.ratio) apply({ ratio });
   });
 }
+
+// —— 图标面板 ——
+//
+// 图标选择是本项目区别于「纯 emoji 梗图生成器」的关键能力（SPEC §1 立柱）。
+// 面板是异步的（CDN 索引 + 逐个 SVG 预取），所以不阻塞首屏；
+// 选中图标后写入 sel.icons → apply() 重建 state → scene() 据此渲染。
+const iconBtn = document.getElementById('icon-btn') as HTMLButtonElement | null;
+const iconPanel = document.getElementById('icon-panel') as HTMLElement | null;
+const iconClose = document.getElementById('icon-close') as HTMLButtonElement | null;
+const iconSearch = document.getElementById('icon-search') as HTMLInputElement | null;
+const iconGrid = document.getElementById('icon-grid') as HTMLElement | null;
+const iconHint = document.getElementById('icon-hint') as HTMLElement | null;
+const iconClear = document.getElementById('icon-clear') as HTMLButtonElement | null;
+const titleInput = document.getElementById('title-input') as HTMLInputElement | null;
+
+let iconSearchQuery = '';
+let iconIndexPromise: Promise<string[]> | null = null;
+
+/** 打开面板：首次加载索引，之后只渲染缓存结果 */
+async function openIconPanel(): Promise<void> {
+  if (!iconPanel) return;
+  if (!iconIndexPromise) iconIndexPromise = loadIconIndex();
+  iconPanel.hidden = false;
+  titleInput?.blur();
+  iconSearch?.focus();
+  await renderIconGrid();
+}
+
+async function loadIconIndex(): Promise<string[]> {
+  const { searchIcons } = await import('./core/simple-icons');
+  return searchIcons('');
+}
+
+async function renderIconGrid(): Promise<void> {
+  if (!iconGrid) return;
+  const t = ui(state.locale);
+  iconGrid.replaceChildren();
+  if (iconHint) iconHint.textContent = t.iconPanelHint;
+  iconGrid.textContent = t.iconPanelLoading;
+
+  const { searchIcons, getIconSvg, getIconName, EMOJI_PRESETS } = await import('./core/simple-icons');
+  const slugs = await searchIcons(iconSearchQuery);
+
+  // emoji 快捷面板 + simple-icons 结果，共用同一网格
+  const cells: Array<{ key: string; label: string; svg?: Promise<string>; emoji?: string }> = [];
+  for (const e of EMOJI_PRESETS) cells.push({ key: `emoji:${e}`, label: e, emoji: e });
+  for (const s of slugs) cells.push({ key: `simple-icons:${s}`, label: getIconName(s), svg: getIconSvg(s) });
+
+  iconGrid.replaceChildren();
+  for (const cell of cells) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-cell';
+    btn.setAttribute('role', 'option');
+    const selected = sel.icons.some((i) => i.icon === cell.key);
+    btn.setAttribute('aria-pressed', String(selected));
+
+    const visual = document.createElement('span');
+    visual.className = 'icon-visual';
+    if (cell.emoji) {
+      visual.className = 'icon-visual emoji';
+      visual.textContent = cell.emoji;
+    } else if (cell.svg) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.style.width = '32px';
+      svg.style.height = '32px';
+      cell.svg
+        .then((text) => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(text, 'image/svg+xml');
+          const path = doc.querySelector('path');
+          if (path) {
+            path.setAttribute('fill', 'currentColor');
+            svg.appendChild(path);
+          }
+        })
+        .catch(() => {});
+      visual.appendChild(svg);
+    }
+    btn.appendChild(visual);
+
+    const label = document.createElement('span');
+    label.textContent = cell.label;
+    btn.appendChild(label);
+
+    btn.addEventListener('click', () => {
+      const idx = sel.icons.findIndex((i) => i.icon === cell.key);
+      if (idx >= 0) {
+        sel.icons.splice(idx, 1);
+      } else {
+        sel.icons.push({ icon: cell.key });
+      }
+      apply({ icons: sel.icons });
+      renderIconGrid();
+    });
+    iconGrid.appendChild(btn);
+  }
+}
+
+iconBtn?.addEventListener('click', () => openIconPanel());
+iconClose?.addEventListener('click', () => {
+  if (iconPanel) iconPanel.hidden = true;
+});
+iconPanel?.addEventListener('click', (e) => {
+  if (e.target === iconPanel && iconPanel) iconPanel.hidden = true;
+});
+iconSearch?.addEventListener('input', () => {
+  iconSearchQuery = iconSearch.value.trim();
+  renderIconGrid();
+});
+iconClear?.addEventListener('click', () => {
+  sel.icons = [];
+  apply({ icons: sel.icons });
+  renderIconGrid();
+});
+
+// 标题输入：写入 state.text['title'][locale]，实时预览（不重建 state，避免丢失图标）
+titleInput?.addEventListener('input', () => {
+  const layer = state.template.layers.find((l) => l.type === 'text');
+  if (!layer) return;
+  state.text = { ...state.text, [layer.id]: { ...state.text[layer.id], [state.locale]: titleInput.value } };
+});
 
 // —— 导出 ——
 const gifBtn = document.getElementById('export-gif') as HTMLButtonElement | null;
