@@ -91,8 +91,8 @@ async function main(): Promise<void> {
   const diff = await diffRatio(png, control);
   set('r-font-diff', `${(diff * 100).toFixed(2)}% 像素不同`);
 
-  // 5. SVG 文件导出
-  const svgBlob = svgToBlob(svgFileContent(state, 0));
+  // 5. SVG 文件导出（simple-icons 图标走 CDN 预取，与字体切片同款模式）
+  const svgBlob = svgToBlob(await svgFileContent(state, 0));
   set('r-svg-size', `${svgBlob.size} bytes（${(svgBlob.size / 1024).toFixed(1)} KB）`);
 
   // 6. 取证 base64：英文卡（rasterizeScene：带墨迹校验，字体未就位会自动重试）

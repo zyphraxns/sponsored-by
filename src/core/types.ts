@@ -79,4 +79,6 @@ export interface SceneState {
   /** 用户最终图标列表；为空则用模板默认 */
   icons: TickerItem[];
   palette?: Partial<Template['palette']>;
+  /** 预取的图标 SVG（simple-icons / upload），key = icon 字符串。scene() 据此渲染非 emoji 图标 */
+  iconSvgs?: Record<string, string>;
 }

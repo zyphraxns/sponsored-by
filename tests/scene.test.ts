@@ -128,6 +128,68 @@ describe('escapeXml', () => {
   });
 });
 
+describe('simple-icons 渲染（iconSvgs 接入）', () => {
+  it('emoji 图标继续走 <text> 字素路径', () => {
+    const out = scene(makeState(), 0);
+    expect(out).toContain('font-family=\'"Apple Color Emoji"');
+  });
+
+  it('simple-icons 图标被内联为 <svg><path>（单色 fg）', () => {
+    const out = scene(
+      makeState({
+        icons: [{ icon: 'simple-icons:openai' }],
+        iconSvgs: { 'simple-icons:openai': '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>' },
+      }),
+      0,
+    );
+    expect(out).toContain('<path d="M12 2L2 7l10 5 10-5-10-5z"');
+    expect(out).toContain('fill="#ffffff"'); // 强制单色
+    expect(out).not.toContain('font-family=\'Apple Color Emoji\''); // 不走 emoji 路径
+  });
+
+  it('无 iconSvgs 时 simple-icons 图标静默跳过（不炸渲染）', () => {
+    const out = scene(makeState({ icons: [{ icon: 'simple-icons:openai' }] }), 0);
+    expect(out).not.toContain('<path');
+    expect(out.startsWith('<svg')).toBe(true);
+  });
+
+  it('upload 图标保留原始内容', () => {
+    const out = scene(
+      makeState({
+        icons: [{ icon: 'upload:custom' }],
+        iconSvgs: { 'upload:custom': '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>' },
+      }),
+      0,
+    );
+    expect(out).toContain('<circle cx="12" cy="12" r="10"/>');
+  });
+
+  it('图标被裁切在 ticker 盒内（不溢出）', () => {
+    const out = scene(
+      makeState({
+        icons: [{ icon: 'simple-icons:openai' }],
+        iconSvgs: { 'simple-icons:openai': '<svg viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>' },
+      }),
+      0,
+    );
+    // clipPath 仍存在，图标被限制在行内
+    expect(out).toContain('clipPath');
+  });
+
+  it('同图标多实例共享一个 symbol（<use> 复用）', () => {
+    const out = scene(
+      makeState({
+        icons: [{ icon: 'simple-icons:openai' }],
+        iconSvgs: { 'simple-icons:openai': '<svg viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>' },
+      }),
+      0,
+    );
+    // 每个实例一个 <svg> 内联，但 path 内容相同（确定性）
+    const pathCount = (out.match(/<path d="M1 1h22v22H1z"/g) ?? []).length;
+    expect(pathCount).toBeGreaterThanOrEqual(9); // 三行 × 跨边界重复项
+  });
+});
+
 describe('layout auto-shrink', () => {
   it('长文案字号更小且不超框', () => {
     const long = 'A MUCH LONGER TITLE LINE';

@@ -1,6 +1,6 @@
 import { Encoder } from 'modern-gif';
 import type { DitherMethod } from 'modern-gif';
-import { canvasSize, loopSecondsFor, scene, sceneTexts } from '../core/scene';
+import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneTexts } from '../core/scene';
 import { frameCount, frameDelayMs, frameTime } from '../core/frames';
 import type { ExportProgress } from '../core/frames';
 import type { SceneState } from '../core/types';
@@ -31,6 +31,9 @@ export async function exportGif(state: SceneState, onProgress?: GifProgress): Pr
   const total = frameCount(fps, loop);
   // 文案在整段动画里不变：字体切片选择只做一次（首帧 fetch，其余帧命中缓存）
   const texts = sceneTexts(state);
+  // 图标同理：整段动画用到的 SVG 图标只预取一次，写入 iconSvgs 供 scene() 渲染
+  const iconSvgs = await sceneIconSvgs(state);
+  const enriched: SceneState = { ...state, iconSvgs };
 
   const encoder = new Encoder({
     width: w,
@@ -46,11 +49,11 @@ export async function exportGif(state: SceneState, onProgress?: GifProgress): Pr
   const canvas = document.createElement('canvas');
 
   for (let i = 0; i < total; i++) {
-    const svg = await svgForRaster(scene(state, frameTime(i, delayMs)), texts);
+    const svg = await svgForRaster(scene(enriched, frameTime(i, delayMs)), texts);
     // 首帧走带墨迹校验的路径：字体在 <img> 里异步解码，首帧可能空白；
     // 一旦首帧就位，后续帧共用同一字体缓存，直接栅格化即可。
     if (i === 0) {
-      await rasterizeScene(svg, w, h, state, canvas);
+      await rasterizeScene(svg, w, h, enriched, canvas);
     } else {
       await rasterizeToCanvas(svg, w, h, canvas);
     }

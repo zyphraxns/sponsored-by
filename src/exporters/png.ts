@@ -1,4 +1,4 @@
-import { canvasSize, scene, sceneTexts } from '../core/scene';
+import { canvasSize, scene, sceneIconSvgs, sceneTexts } from '../core/scene';
 import type { SceneState, TextLayer } from '../core/types';
 import { svgForRaster } from './fonts';
 
@@ -132,8 +132,10 @@ export async function rasterizeScene(
 /** 静态 PNG 导出：t = 0，画布取模板自然像素（basePx） */
 export async function exportPng(state: SceneState, t: number): Promise<Blob> {
   const { w, h } = canvasSize(state.template, state.ratio);
-  const svg = await svgForRaster(scene(state, t), sceneTexts(state));
-  const canvas = await rasterizeScene(svg, w, h, state);
+  const iconSvgs = await sceneIconSvgs(state);
+  const enriched: SceneState = { ...state, iconSvgs };
+  const svg = await svgForRaster(scene(enriched, t), sceneTexts(enriched));
+  const canvas = await rasterizeScene(svg, w, h, enriched);
   const blob = await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((result) => resolve(result), 'image/png');
   });

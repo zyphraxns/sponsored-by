@@ -329,10 +329,10 @@ pngBtn?.addEventListener('click', async () => {
   }
 });
 
-svgBtn?.addEventListener('click', () => {
+svgBtn?.addEventListener('click', async () => {
   const t = ui(state.locale);
   try {
-    const blob = svgToBlob(svgFileContent(state, 0));
+    const blob = svgToBlob(await svgFileContent(state, 0));
     download(blob, svgFilename(state));
     setStatus(t.exported('SVG', formatBytes(blob.size)));
   } catch (err) {

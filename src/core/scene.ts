@@ -1,6 +1,7 @@
 import type { SceneState, Template, TextLayer, TickerLayer, TickerItem } from './types';
 import { fitFontSize } from './layout';
 import { loopDuration, tickerPositions } from './ticker';
+import { isEmoji, isSimpleIcons, isUpload } from './simple-icons';
 
 /**
  * 预览期字体栈（system font stack 秒开，不等字体加载；导出字体策略见 SPEC 3.2）。
@@ -54,6 +55,44 @@ export function sceneTexts(state: SceneState): string[] {
 }
 
 /**
+ * 场景内实际会渲染的非 emoji 图标 key（去重）。
+ *
+ * scene() 用 state.icons（空则回退模板 layer.items），
+ * 这里镜像同一份取值逻辑——否则导出层预取的图标覆盖不到真正被渲染的那些。
+ */
+export function collectIconKeys(state: SceneState): string[] {
+  const keys = new Set<string>();
+  for (const layer of state.template.layers) {
+    if (layer.type !== 'ticker') continue;
+    const items: TickerItem[] = state.icons.length > 0 ? state.icons : layer.items;
+    for (const item of items) {
+      if (!isEmoji(item.icon)) keys.add(item.icon);
+    }
+  }
+  return [...keys];
+}
+
+/**
+ * 预取场景内 simple-icons 图标 SVG（导出链路用，与 fonts.ts 的切片预取同款模式）。
+ *
+ * 只处理 simple-icons: 前缀（走 CDN）；upload: 图标由用户直接提供内容，
+ * 调用方自行写入 iconSvgs。返回空对象表示场景无 SVG 图标。
+ */
+export async function sceneIconSvgs(state: SceneState): Promise<Record<string, string>> {
+  const keys = collectIconKeys(state).filter((k) => isSimpleIcons(k));
+  if (keys.length === 0) return {};
+  const { getIconSvg } = await import('./simple-icons');
+  const out: Record<string, string> = {};
+  await Promise.all(
+    keys.map(async (k) => {
+      const slug = k.slice('simple-icons:'.length);
+      out[k] = await getIconSvg(slug);
+    }),
+  );
+  return out;
+}
+
+/**
  * 全局无缝循环周期（秒）。
  * 'auto' 时由各行周期取 LCM；当前各行同速（速度倍率统一），
  * 故等于基准周期除以速度倍率。M3 启用 speedJitter 后各行周期分化，
@@ -93,7 +132,7 @@ export function scene(state: SceneState, t: number): string {
     if (layer.type === 'text') {
       out.push(renderText(layer, state, w, h, fg));
     } else {
-      out.push(renderTicker(layer, state, w, h, loop, t));
+      out.push(renderTicker(layer, state, w, h, loop, t, fg));
     }
   }
   out.push('</svg>');
@@ -118,6 +157,7 @@ function renderTicker(
   h: number,
   loop: number,
   t: number,
+  fg: string,
 ): string {
   const items: TickerItem[] = state.icons.length > 0 ? state.icons : layer.items;
   const rows = Math.max(1, state.rows || layer.rows);
@@ -138,8 +178,6 @@ function renderTicker(
     const dir = i % 2 === 0 ? 1 : -1; // 隔行反向（经典跑马灯观感；周期不受方向影响）
     const rowPhase = (((i * layer.phaseJitter) % 1) + 1) % 1; // 行间错相
     const rowSpeed = dir * (state.speed || 1);
-    // M0 单实例预览，clipPath id 由 layer id + 行号确定性生成；
-    // 多实例同页时需要加实例前缀（M1 导出链路接入时处理）
     const clipId = `clip-${layer.id}-${i}`;
 
     defs.push(
@@ -147,7 +185,7 @@ function renderTicker(
     );
     body.push(`<g clip-path="url(#${clipId})">`);
     for (const p of tickerPositions(items, spacing, boxW, rowPhase, t, rowSpeed, loop)) {
-      const icon = renderIcon(p.item.icon, boxX + p.x, cy, iconSize);
+      const icon = renderIcon(p.item.icon, boxX + p.x, cy, iconSize, state.iconSvgs, fg);
       if (icon) body.push(icon);
     }
     body.push('</g>');
@@ -155,9 +193,63 @@ function renderTicker(
   return [`<g id="${layer.id}">`, `<defs>${defs.join('')}</defs>`, ...body, '</g>'].join('\n');
 }
 
-function renderIcon(icon: string, cx: number, cy: number, size: number): string {
-  if (!icon.startsWith('emoji:')) return ''; // M0 仅 emoji；simple-icons / 上传见后续里程碑
-  const glyph = icon.slice('emoji:'.length);
-  const baseline = cy + size * 0.36;
-  return `<text x="${f(cx)}" y="${f(baseline)}" font-family='${EMOJI_FONT}' font-size="${f(size)}" text-anchor="middle">${escapeXml(glyph)}</text>`;
+/**
+ * 图标渲染（scene() 内部调用）。
+ *
+ * 三种来源：
+ * - emoji:           → <text> 字素，走 EMOJI_FONT
+ * - simple-icons:slug → 内联 <svg><path>，强制单色（fg），避免 GIF 调色板被图标自带 hex 吃掉
+ * - upload:<name>    → 内联 <svg>，保留原始内容（用户上传的多色图）
+ *
+ * iconSvgs 由导出层预取注入（见 exporters/fonts.ts 同款模式）；
+ * 预览期为空 → 非 emoji 图标静默跳过（不炸渲染）。
+ */
+function renderIcon(
+  icon: string,
+  cx: number,
+  cy: number,
+  size: number,
+  iconSvgs?: Record<string, string>,
+  fg = '#ffffff',
+): string {
+  if (isEmoji(icon)) {
+    const glyph = icon.slice('emoji:'.length);
+    const baseline = cy + size * 0.36;
+    return `<text x="${f(cx)}" y="${f(baseline)}" font-family='${EMOJI_FONT}' font-size="${f(size)}" text-anchor="middle">${escapeXml(glyph)}</text>`;
+  }
+
+  const svg = iconSvgs?.[icon];
+  if (!svg) return '';
+
+  if (isSimpleIcons(icon)) {
+    return renderSimpleIconsSvg(svg, cx, cy, size, fg);
+  }
+  if (isUpload(icon)) {
+    return renderInlineSvg(svg, cx, cy, size);
+  }
+  return '';
+}
+
+/** 从 simple-icons SVG 提取 path d，包成内联 svg（viewBox 0 0 24 24，强制单色） */
+function renderSimpleIconsSvg(svg: string, cx: number, cy: number, size: number, fg: string): string {
+  const d = extractPathD(svg);
+  if (!d) return '';
+  const half = size / 2;
+  return [
+    `<svg x="${f(cx - half)}" y="${f(cy - half)}" width="${f(size)}" height="${f(size)}" viewBox="0 0 24 24">`,
+    `<path d="${escapeXml(d)}" fill="${fg}"/>`,
+    `</svg>`,
+  ].join('');
+}
+
+/** 用户上传 SVG：保留原始内容，按 size 缩放居中 */
+function renderInlineSvg(svg: string, cx: number, cy: number, size: number): string {
+  const half = size / 2;
+  return `<g transform="translate(${f(cx - half)},${f(cy - half)}) scale(${f(size / 24)})">${svg}</g>`;
+}
+
+/** 提取首个 <path> 的 d 属性（simple-icons 均为单路径） */
+function extractPathD(svg: string): string | null {
+  const m = svg.match(/<path\b[^>]*\bd="([^"]*)"/);
+  return m?.[1] ?? null;
 }

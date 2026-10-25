@@ -75,8 +75,8 @@ describe('svgForFile', () => {
 });
 
 describe('svgFileContent', () => {
-  it('带 XML 声明', () => {
-    expect(svgFileContent(state, 0).startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+  it('带 XML 声明', async () => {
+    expect((await svgFileContent(state, 0)).startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
   });
 });
 

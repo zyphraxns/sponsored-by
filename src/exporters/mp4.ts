@@ -16,7 +16,7 @@ import {
   getFirstEncodableVideoCodec,
 } from 'mediabunny';
 import type { VideoCodec } from 'mediabunny';
-import { canvasSize, loopSecondsFor, scene, sceneTexts } from '../core/scene';
+import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneTexts } from '../core/scene';
 import type { ExportProgress } from '../core/frames';
 import type { SceneState } from '../core/types';
 import { rasterizeScene, rasterizeToCanvas } from './png';
@@ -104,12 +104,14 @@ export async function exportMp4(
   await output.start();
 
   const texts = sceneTexts(state);
+  const iconSvgs = await sceneIconSvgs(state);
+  const enriched: SceneState = { ...state, iconSvgs };
   for (let i = 0; i < total; i++) {
     const t = i / fps;
-    const svg = await svgForRaster(scene(state, t), texts);
+    const svg = await svgForRaster(scene(enriched, t), texts);
     // 首帧走带墨迹校验的路径（字体在 <img> 里异步解码），后续帧共用字体缓存
     if (i === 0) {
-      await rasterizeScene(svg, w, h, state, canvas);
+      await rasterizeScene(svg, w, h, enriched, canvas);
     } else {
       await rasterizeToCanvas(svg, w, h, canvas);
     }
