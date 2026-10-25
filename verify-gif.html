@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GIF 导出自检 — sponsored-by</title>
+    <style>
+      :root {
+        --surface: #ededea;
+        --ink: #1a1a18;
+        --ink-quiet: #5c5c56;
+        --ok: #1c6b3c;
+        --bad: #a33333;
+        --hairline: #d8d8d3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 40px 24px 64px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, "Helvetica Neue", "PingFang SC", sans-serif;
+      }
+      .wrap { max-width: 880px; margin: 0 auto; }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+      .lead { margin: 0 0 28px; color: var(--ink-quiet); font-size: 13px; line-height: 1.7; }
+      dl.results {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 8px 20px;
+        margin: 0 0 36px;
+        font-size: 13px;
+        padding-top: 20px;
+        border-top: 1px solid var(--hairline);
+      }
+      dl.results dt { color: var(--ink-quiet); }
+      dl.results dd { margin: 0; font-variant-numeric: tabular-nums; }
+      .pass { color: var(--ok); font-weight: 700; }
+      .fail { color: var(--bad); font-weight: 700; }
+      .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+      figure { margin: 0; }
+      figcaption { font-size: 12px; color: var(--ink-quiet); margin-bottom: 8px; }
+      img.artifact { width: 300px; height: auto; display: block; border: 1px solid var(--hairline); background: #0a0a0a; }
+      pre.b64 { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>GIF 导出自检</h1>
+      <p class="lead">
+        在真实浏览器中执行 M3 GIF 导出链路（modern-gif：67 帧 / 60ms / maxColors 32 / atkinson / 全局调色板 / 无限循环），
+        回读首帧画面，并对中文标题变体做 R2 可读性探针。<2 MB 等判据由 scripts/gif-inspect.mjs 对字节核对。
+      </p>
+      <dl class="results">
+        <dt>状态</dt><dd id="r-status" data-result="status">运行中…</dd>
+        <dt>GIF 字节</dt><dd id="r-size" data-result="size">—</dd>
+        <dt>编码耗时</dt><dd id="r-time" data-result="time">—</dd>
+        <dt>魔数 / 循环扩展</dt><dd id="r-magic" data-result="magic">—</dd>
+        <dt>首帧尺寸</dt><dd id="r-dim" data-result="dim">—</dd>
+        <dt>中文变体字节</dt><dd id="r-zh-size" data-result="zh-size">—</dd>
+        <dt>回读（首/末帧）</dt><dd id="r-roundtrip" data-result="roundtrip">—</dd>
+      </dl>
+      <div class="row">
+        <figure>
+          <figcaption>GIF 首帧（量化后画面）</figcaption>
+          <img class="artifact" id="frame-png" alt="GIF 首帧" width="300" />
+        </figure>
+        <figure>
+          <figcaption>中文标题变体首帧（R2 可读性探针）</figcaption>
+          <img class="artifact" id="frame-zh-png" alt="中文变体首帧" width="300" />
+        </figure>
+      </div>
+      <pre class="b64" id="gif-b64" data-b64="exported.gif"></pre>
+      <pre class="b64" id="gif-zh-b64" data-b64="exported-zh.gif"></pre>
+      <pre class="b64" id="frame-b64" data-b64="frame1.png"></pre>
+      <pre class="b64" id="frame-zh-b64" data-b64="frame1-zh.png"></pre>
+    </div>
+    <script type="module" src="/src/verify-gif.ts"></script>
+  </body>
+</html>

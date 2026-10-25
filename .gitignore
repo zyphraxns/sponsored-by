@@ -1,0 +1,10 @@
+# 依赖与构建产物
+node_modules/
+dist/
+*.local
+
+# 系统与编辑器
+.DS_Store
+
+# 本地工具状态（AI 会话记忆等），不属于项目源码
+.workbuddy/

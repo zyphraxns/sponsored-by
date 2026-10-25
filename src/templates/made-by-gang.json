@@ -1,0 +1,49 @@
+{
+  "id": "made-by-gang",
+  "version": 1,
+  "name": { "en": "Made by the gang", "zh": "一帮人造的" },
+  "canvas": { "ratios": ["1:1", "4:5", "16:9"], "basePx": 1080 },
+  "constraints": { "maxColors": 8, "allowGradient": false, "allowAlpha": false },
+  "palette": { "bg": "#e9dfc9", "fg": "#221c12", "accent": "#9a3412" },
+  "layers": [
+    {
+      "type": "text",
+      "id": "title",
+      "default": { "en": "MADE BY THE GANG", "zh": "一帮人造的" },
+      "font": "display",
+      "fit": "auto-shrink",
+      "box": [0.06, 0.1, 0.88, 0.22],
+      "align": "center"
+    },
+    {
+      "type": "ticker",
+      "id": "rows",
+      "rows": 3,
+      "box": [0, 0.38, 1, 0.52],
+      "iconScale": 0.58,
+      "gap": 0.55,
+      "phaseJitter": 0.41,
+      "speedJitter": 0.12,
+      "items": [
+        { "icon": "emoji:🔧", "phase": 0, "speed": 1 },
+        { "icon": "emoji:⚡️", "phase": 0.5, "speed": 1 },
+        { "icon": "emoji:🤝", "phase": 0.25, "speed": 1 }
+      ]
+    }
+  ],
+  "variants": [
+    {
+      "id": "made-by-friends",
+      "name": { "en": "Made by friends", "zh": "好朋友们一起造的" },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/layers/0/default",
+          "value": { "en": "MADE BY FRIENDS", "zh": "好朋友们一起造的" }
+        }
+      ]
+    }
+  ],
+  "animation": { "loopSeconds": "auto", "fps": 16, "loop": true },
+  "export": { "formats": ["gif", "png", "svg", "mp4"], "gifMaxColors": 32, "dither": "atkinson" }
+}

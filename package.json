@@ -1,0 +1,47 @@
+{
+  "name": "sponsored-by",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Parody meme generator: render a looping \"SPONSORED BY\" card in the browser and export it as GIF, MP4, PNG or SVG.",
+  "license": "MIT",
+  "author": "zyphraxns",
+  "homepage": "https://zyphraxns.github.io/sponsored-by/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zyphraxns/sponsored-by.git"
+  },
+  "keywords": [
+    "meme-generator",
+    "gif",
+    "mp4",
+    "webcodecs",
+    "svg",
+    "canvas",
+    "parody",
+    "browser-only"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "fonts:b64": "node -e \"const fs=require('fs');const f='src/assets/fonts/inter-latin-800-normal.woff2';fs.writeFileSync(f+'.b64',fs.readFileSync(f).toString('base64'))\"",
+    "fonts:slices": "node scripts/build-font-slices.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/noto-sans-sc": "^5.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "mediabunny": "^1.62.1",
+    "modern-gif": "^2.1.0"
+  }
+}

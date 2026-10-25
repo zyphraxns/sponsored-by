@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a layout, an export option, or anything else
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: the roadmap below is already planned — a PR is more welcome than an issue for those.
+        Content editing UI · `simple-icons` brand icons · multiple different logos queued together.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: Describe the situation, not the solution.
+      placeholder: |
+        When I post a 4:5 card to Instagram, the bottom row of icons gets cropped by the UI overlay.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part?
+      options:
+        - Rendering / layouts
+        - Export formats
+        - Platform presets
+        - UI / i18n
+        - Developer tooling
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

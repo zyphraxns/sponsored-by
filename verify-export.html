@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>导出管线自检 — sponsored-by</title>
+    <style>
+      :root {
+        --surface: #ededea;
+        --ink: #1a1a18;
+        --ink-quiet: #5c5c56;
+        --ok: #1c6b3c;
+        --bad: #a33333;
+        --hairline: #d8d8d3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 40px 24px 64px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, "Helvetica Neue", "PingFang SC", sans-serif;
+      }
+      .wrap { max-width: 880px; margin: 0 auto; }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+      .lead { margin: 0 0 28px; color: var(--ink-quiet); font-size: 13px; line-height: 1.7; }
+      dl.results {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 8px 20px;
+        margin: 0 0 36px;
+        font-size: 13px;
+        padding-top: 20px;
+        border-top: 1px solid var(--hairline);
+      }
+      dl.results dt { color: var(--ink-quiet); }
+      dl.results dd { margin: 0; font-variant-numeric: tabular-nums; }
+      .pass { color: var(--ok); font-weight: 700; }
+      .fail { color: var(--bad); font-weight: 700; }
+      .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+      figure { margin: 0; }
+      figcaption { font-size: 12px; color: var(--ink-quiet); margin-bottom: 8px; }
+      img.artifact {
+        width: 300px;
+        height: auto;
+        display: block;
+        border: 1px solid var(--hairline);
+        background: #0a0a0a;
+      }
+      pre.b64 {
+        flex: 1;
+        min-width: 260px;
+        max-height: 300px;
+        overflow: auto;
+        font-size: 10px;
+        line-height: 1.5;
+        color: var(--ink-quiet);
+        margin: 0;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>导出管线自检</h1>
+      <p class="lead">
+        在真实浏览器中执行导出链路：字体注入 → SVG 栅格化 → PNG 回读，并与「不注入字体」对照组做像素比对。
+        对照差异大于 0 即证明产物使用的是打包内字体，而非系统回退——这是「PNG 跨设备字体一致」的机检证据。
+        中文卡另走「按需切片」路径：只内嵌标题实际命中的 Noto Sans SC 切片（通常 3~4 片），
+        切片数 / 清单 / 对照差异三项共同证明中文闭环成立。
+      </p>
+      <dl class="results">
+        <dt>状态</dt><dd id="r-status" data-result="status">运行中…</dd>
+        <dt>PNG 字节</dt><dd id="r-png-size" data-result="png-size">—</dd>
+        <dt>PNG 尺寸</dt><dd id="r-png-dim" data-result="png-dim">—</dd>
+        <dt>PNG 魔数</dt><dd id="r-magic" data-result="png-magic">—</dd>
+        <dt>内嵌字体对照差异</dt><dd id="r-font-diff" data-result="font-diff">—</dd>
+        <dt>SVG 字节</dt><dd id="r-svg-size" data-result="svg-size">—</dd>
+        <dt>中文切片数</dt><dd id="r-zh-slices" data-result="zh-slices">—</dd>
+        <dt>中文切片清单</dt><dd id="r-zh-slice-files" data-result="zh-slice-files">—</dd>
+        <dt>中文 PNG 字节</dt><dd id="r-zh-png-size" data-result="zh-png-size">—</dd>
+        <dt>中文标题亮像素</dt><dd id="r-zh-title-pixels" data-result="zh-title-pixels">—</dd>
+        <dt>中文内嵌对照差异</dt><dd id="r-zh-diff" data-result="zh-diff">—</dd>
+      </dl>
+      <div class="row">
+        <figure>
+          <figcaption>导出的 PNG（en，data URI 预览）</figcaption>
+          <img class="artifact" id="png-preview" alt="导出产物预览" width="300" />
+        </figure>
+        <figure>
+          <figcaption>导出的 PNG（zh，内嵌 Noto 切片）</figcaption>
+          <img class="artifact" id="png-zh-preview" alt="中文导出产物预览" width="300" />
+        </figure>
+      </div>
+      <pre class="b64" id="png-b64" data-b64="exported.png">（base64 取证输出…）</pre>
+      <pre class="b64" id="png-zh-b64" data-b64="exported-zh.png">（base64 取证输出…）</pre>
+    </div>
+    <script type="module" src="/src/verify-export.ts"></script>
+  </body>
+</html>

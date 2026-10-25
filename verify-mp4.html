@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MP4 导出自检 — sponsored-by</title>
+    <style>
+      :root {
+        --surface: #ededea;
+        --ink: #1a1a18;
+        --ink-quiet: #5c5c56;
+        --ok: #1c6b3c;
+        --bad: #a33333;
+        --hairline: #d8d8d3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 40px 24px 64px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, "Helvetica Neue", "PingFang SC", sans-serif;
+      }
+      .wrap { max-width: 880px; margin: 0 auto; }
+      h1 { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+      .lead { margin: 0 0 28px; color: var(--ink-quiet); font-size: 13px; line-height: 1.7; }
+      dl.results {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 8px 20px;
+        margin: 0 0 36px;
+        font-size: 13px;
+        padding-top: 20px;
+        border-top: 1px solid var(--hairline);
+      }
+      dl.results dt { color: var(--ink-quiet); }
+      dl.results dd { margin: 0; font-variant-numeric: tabular-nums; }
+      .pass { color: var(--ok); font-weight: 700; }
+      .fail { color: var(--bad); font-weight: 700; }
+      .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+      figure { margin: 0; }
+      figcaption { font-size: 12px; color: var(--ink-quiet); margin-bottom: 8px; }
+      img.artifact { width: 300px; height: auto; display: block; border: 1px solid var(--hairline); background: #0a0a0a; }
+      video.artifact { width: 300px; display: block; border: 1px solid var(--hairline); background: #0a0a0a; }
+      pre.b64 { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>MP4 导出自检</h1>
+      <p class="lead">
+        在真实浏览器中执行 M5 MP4 链路（WebCodecs VideoEncoder + mediabunny 封装：30fps / H.264 优先 / 循环点关键帧 / fastStart），
+        然后用 mediabunny 重新解封装 + 解码首帧，验证「编码 → 封装 → 解封装 → 解码」闭环，
+        并校验解码帧里标题确实有墨迹（不是空白或字体重放失败）。
+      </p>
+      <dl class="results">
+        <dt>状态</dt><dd id="r-status" data-result="status">运行中…</dd>
+        <dt>WebCodecs 可用</dt><dd id="r-support" data-result="support">—</dd>
+        <dt>编码器</dt><dd id="r-codec" data-result="codec">—</dd>
+        <dt>MP4 字节</dt><dd id="r-size" data-result="size">—</dd>
+        <dt>编码耗时</dt><dd id="r-time" data-result="time">—</dd>
+        <dt>文件头（ftyp）</dt><dd id="r-ftyp" data-result="ftyp">—</dd>
+        <dt>回读尺寸</dt><dd id="r-dim" data-result="dim">—</dd>
+        <dt>回读时长 / 帧数 / 帧率</dt><dd id="r-playback" data-result="playback">—</dd>
+        <dt>解码首帧标题墨迹</dt><dd id="r-ink" data-result="ink">—</dd>
+      </dl>
+      <div class="row">
+        <figure>
+          <figcaption>解码首帧（来自 MP4 字节，非原始画布）</figcaption>
+          <img class="artifact" id="frame-png" alt="MP4 解码首帧" width="300" />
+        </figure>
+        <figure>
+          <figcaption>同一份 MP4 交给浏览器播放</figcaption>
+          <video class="artifact" id="mp4-video" muted playsinline controls loop></video>
+        </figure>
+      </div>
+      <pre class="b64" id="mp4-b64" data-b64="exported.mp4"></pre>
+      <pre class="b64" id="frame-b64" data-b64="frame1.png"></pre>
+    </div>
+    <script type="module" src="/src/verify-mp4.ts"></script>
+  </body>
+</html>

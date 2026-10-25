@@ -1,0 +1,79 @@
+name: Bug report
+description: Something renders wrong, or an export is broken
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Exported files are the most useful evidence — a broken GIF/MP4 tells us far more than a screenshot of the preview.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected vs. what you got.
+      placeholder: |
+        Expected: the title is visible in the GIF.
+        Actual: the exported GIF has an empty title area.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the site
+        2. Pick layout "sponsored-by" / variant "made-possible"
+        3. Switch language to 中文
+        4. Click "Export GIF"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part?
+      options:
+        - Live preview (animation / layout)
+        - GIF export
+        - MP4 export
+        - PNG export
+        - SVG export
+        - Platform preset / size estimate
+        - UI / i18n
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 141 / Safari 18.2 / Firefox 133
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS 14.8 / Windows 11 / iOS 18
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Anything in the browser console or the footer status line.
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Exported file size, the preset you used, whether the same export works on another browser.
+        For MP4 issues, note that WebCodecs is required (Firefox for Android does not support it).

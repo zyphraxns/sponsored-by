@@ -1,0 +1,17 @@
+# 默认按文本处理，显式声明二进制，避免 Git 误判/损坏
+* text=auto eol=lf
+
+*.woff2 binary
+*.gif binary
+*.png binary
+*.mp4 binary
+*.ico binary
+
+# 生成产物：不计入语言统计，也不参与 diff 噪音
+public/fonts/noto-sans-sc/*.woff2 linguist-generated=true
+src/assets/fonts/*.b64 linguist-generated=true
+package-lock.json linguist-generated=true
+docs/demo.gif linguist-documentation=true
+
+# 文档语言统计
+*.md text
