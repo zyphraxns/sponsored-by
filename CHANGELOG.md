@@ -18,7 +18,7 @@ First public release. Built in six milestones, each with a verifiable acceptance
 
 - `scene(state, t) → SVG` as the single rendering source for preview and every export format.
 - Seamless ticker scrolling: the layout at `t = loop` is identical to `t = 0`; multi-row phase offsets and per-row reverse scrolling.
-- Layout engine driven by JSON: three layouts (`sponsored-by`, `made-by-gang`, `no-sponsors`) plus tonal variants applied as RFC 6902 JSON Patches (`made-possible`, `inverted`, `still-no-sponsors`).
+- Layout engine driven by JSON: three layouts (`sponsored-by`, `made-by-gang`, `no-sponsors`) plus four tonal variants applied as RFC 6902 JSON Patches (`made-possible`, `inverted`, `made-by-friends`, `still-no-sponsors`).
 - Runtime template validation with errors naming the exact failing path.
 
 **Export**
