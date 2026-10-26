@@ -37,6 +37,12 @@ export interface UiStrings {
   iconLabel: string;
   /** 标题输入框标签 */
   titleLabel: string;
+  /** 行数标签 */
+  rowsLabel: string;
+  /** 速度标签 */
+  speedLabel: string;
+  /** 色板标签 */
+  paletteLabel: string;
   /** 图标面板标题 */
   iconPanelTitle: string;
   /** 图标面板搜索占位 */
@@ -74,6 +80,9 @@ export const UI: Record<Locale, UiStrings> = {
     platformLabel: 'Post to',
     iconLabel: 'Icons',
     titleLabel: 'Title',
+    rowsLabel: 'Rows',
+    speedLabel: 'Speed',
+    paletteLabel: 'Palette',
     iconPanelTitle: 'Choose icons',
     iconPanelSearch: 'Search brands…',
     iconPanelLoading: 'Loading…',
@@ -108,6 +117,9 @@ export const UI: Record<Locale, UiStrings> = {
     platformLabel: '发到',
     iconLabel: '图标',
     titleLabel: '标题',
+    rowsLabel: '行数',
+    speedLabel: '速度',
+    paletteLabel: '色板',
     iconPanelTitle: '选择图标',
     iconPanelSearch: '搜索品牌…',
     iconPanelLoading: '加载中…',

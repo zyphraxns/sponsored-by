@@ -12,6 +12,10 @@ export interface DefaultStateOptions {
   text?: SceneState['text'];
   /** 用户色板覆盖；同上 */
   palette?: SceneState['palette'];
+  /** 用户覆盖的 ticker 行数 */
+  rows?: number;
+  /** 用户覆盖的速度倍率（须为有理数，保证 LCM 周期有限） */
+  speed?: number;
 }
 
 /**
@@ -29,8 +33,8 @@ export function createDefaultState(options: DefaultStateOptions = {}): SceneStat
     locale: options.locale ?? 'en',
     text: options.text ?? {},
     ratio: options.ratio ?? '1:1',
-    rows: ticker?.rows ?? 3,
-    speed: 1,
+    rows: options.rows ?? ticker?.rows ?? 3,
+    speed: options.speed ?? 1,
     icons: options.icons ?? [],
     palette: options.palette ?? {},
   };

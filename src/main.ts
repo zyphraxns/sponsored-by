@@ -27,8 +27,12 @@ interface Selection {
   icons: TickerItem[];
   /** 用户文案覆盖 */
   text: SceneState['text'];
-  /** 用户色板覆盖 */
-  palette: SceneState['palette'];
+  /** 用户色板覆盖（只含参与渲染的键；accent 尚未接入场景渲染，见 scene.ts 说明） */
+  palette: NonNullable<SceneState['palette']>;
+  /** 用户覆盖的行数；undefined = 跟随模板默认（不能硬编码 3，否则将来 4 行的模板会被压回去） */
+  rows?: number;
+  /** 用户覆盖的速度倍率（有理数，保证 LCM 周期有限） */
+  speed: number;
 }
 
 let sel: Selection = {
@@ -39,6 +43,7 @@ let sel: Selection = {
   icons: [],
   text: {},
   palette: {},
+  speed: 1,
 };
 let state: SceneState = createDefaultState(sel);
 let loopSeconds = loopSecondsFor(state);
@@ -173,6 +178,9 @@ function refreshChrome(): void {
     ['label-ratio', t.ratioLabel],
     ['label-icons', t.iconLabel],
     ['label-title', t.titleLabel],
+    ['label-rows', t.rowsLabel],
+    ['label-speed', t.speedLabel],
+    ['label-palette', t.paletteLabel],
     ['icon-panel-title', t.iconPanelTitle],
     ['export-gif', t.exportGif],
     ['export-mp4', t.exportMp4],
@@ -187,6 +195,14 @@ function refreshChrome(): void {
 
   if (iconSearch) iconSearch.placeholder = t.iconPanelSearch;
   if (iconHint) iconHint.textContent = t.iconPanelHint;
+
+  // 行数 / 速度滑块同步 UI（读 state 而非 sel：sel.rows 可能是 undefined）
+  if (rowsRange) rowsRange.value = String(state.rows);
+  if (rowsVal) rowsVal.textContent = String(state.rows);
+  if (speedRange) speedRange.value = String(Math.round(sel.speed * 100));
+  if (speedVal) speedVal.textContent = speedLabel(sel.speed);
+
+  renderPaletteSwatches();
 
   renderPlatformOptions(state.locale);
   if (platformSelect) platformSelect.value = sel.platform;
@@ -216,19 +232,27 @@ function refreshChrome(): void {
   refreshMeta();
 }
 
+/**
+ * 滑块 / 取色器这类连续输入的轻量重建。
+ *
+ * 与 apply() 的两点区别，都是踩过的坑：
+ * - **不重置时间轴**：滑块用 input 事件连续触发，每次重置 start 会让画面僵在 t=0；
+ * - **不刷全量 chrome**：refreshChrome() 会重建版式/平台下拉与色板 DOM，
+ *   拖动过程中把正在操作的 <input> 销毁掉。
+ */
+function rebuildLive(partial: Partial<Selection>): void {
+  sel = { ...sel, ...partial };
+  state = createDefaultState(sel);
+  loopSeconds = loopSecondsFor(state);
+  if (reducedMotion) renderAt(0);
+  refreshMeta();
+}
+
 /** 切换版式 / 语言 / 比例时重建 state。用户内容（icons/text/palette）透传，
  *  避免换版式时把已选图标和文案清空——切换的是版式，不是用户的作品。 */
-function apply(partial: Partial<Selection & { icons?: TickerItem[]; text?: SceneState['text']; palette?: SceneState['palette'] }>): void {
+function apply(partial: Partial<Selection>): void {
   sel = { ...sel, ...partial };
-  state = createDefaultState({
-    templateId: sel.templateId,
-    variantId: sel.variantId,
-    locale: sel.locale,
-    ratio: sel.ratio,
-    icons: partial.icons ?? sel.icons,
-    text: partial.text ?? sel.text,
-    palette: sel.palette,
-  });
+  state = createDefaultState(sel);
   loopSeconds = loopSecondsFor(state);
   start = performance.now(); // 切换后从 t=0 起播，动作干净
   if (reducedMotion) renderAt(0);
@@ -246,7 +270,9 @@ platformSelect?.addEventListener('change', () => {
 templateSelect?.addEventListener('change', () => {
   const [templateId, variantId] = templateSelect.value.split('|');
   if (!templateId) return;
-  apply({ templateId, variantId: variantId || undefined });
+  // 色板是版式属性而非用户内容：把 sponsored-by 改成白底再切到 no-sponsors（近黑底），
+  // 若继续透传覆盖色，新版式直接糊成一片。换版式一律回到新模板的默认色板。
+  apply({ templateId, variantId: variantId || undefined, palette: {} });
 });
 
 for (const btn of localeBtns) {
@@ -379,11 +405,90 @@ iconClear?.addEventListener('click', () => {
   renderIconGrid();
 });
 
-// 标题输入：写入 state.text['title'][locale]，实时预览（不重建 state，避免丢失图标）
+// 标题输入：写入 sel.text（这是重建 state 的唯一来源）并立刻同步到 state.text，
+// 实时预览。**必须两边都写**——只写 state.text 的话，用户随后拖任意滑块触发
+// rebuildLive() 重建 state 时，标题会静默退回模板默认值。
 titleInput?.addEventListener('input', () => {
   const layer = state.template.layers.find((l) => l.type === 'text');
   if (!layer) return;
-  state.text = { ...state.text, [layer.id]: { ...state.text[layer.id], [state.locale]: titleInput.value } };
+  const value = titleInput.value;
+  const text = { ...sel.text, [layer.id]: { ...sel.text[layer.id], [state.locale]: value } };
+  sel.text = text;
+  state.text = text;
+});
+
+// —— 行数 / 速度 / 色板 ——
+const rowsRange = document.getElementById('rows-range') as HTMLInputElement | null;
+const rowsVal = document.getElementById('rows-val') as HTMLElement | null;
+const speedRange = document.getElementById('speed-range') as HTMLInputElement | null;
+const speedVal = document.getElementById('speed-val') as HTMLElement | null;
+const paletteSwatches = document.getElementById('palette-swatches') as HTMLElement | null;
+
+/** 把速度滑块值（50..200）映射到有理数倍率，保证 loopDuration 的 LCM 周期有限 */
+function quantizeSpeed(pct: number): number {
+  // 50→0.5, 100→1, 200→2；中间取 0.05 步长，分母 ≤20
+  const raw = pct / 100;
+  return Math.round(raw * 20) / 20;
+}
+
+function speedLabel(v: number): string {
+  return `${Math.round(v * 100) / 100}×`;
+}
+
+/**
+ * 界面上可调的色板键。
+ *
+ * 只有 bg / fg 参与场景渲染（见 core/scene.ts 的 palette 取值）。
+ * 模板 JSON 里的 accent 是预留位——三份模板都配了醒目的 accent（黄 / 赭 / 红），
+ * 语义上指向「大标题色」，但渲染管线尚未接入。**不做假控件**：接入 accent
+ * 等于改主视觉（连 docs/demo.gif 都要重做），属于独立的设计变更，不混在控件收尾里。
+ */
+const COLOR_KEYS = [
+  { key: 'bg', label: { en: 'Background', zh: '背景' } },
+  { key: 'fg', label: { en: 'Foreground', zh: '前景' } },
+] as const;
+
+function renderPaletteSwatches(): void {
+  if (!paletteSwatches) return;
+  const p = state.template.palette;
+  paletteSwatches.replaceChildren();
+  for (const { key, label } of COLOR_KEYS) {
+    const current = sel.palette[key] ?? p[key];
+    const name = label[state.locale];
+    // 用 <label> 而不是 <button>：色块里要嵌 <input type="color">，
+    // 而 button 内嵌交互元素是非法 HTML 嵌套。label 原生把点击转给 input。
+    const sw = document.createElement('label');
+    sw.className = 'swatch';
+    sw.style.background = current;
+    sw.classList.toggle('is-custom', sel.palette[key] !== undefined);
+    sw.title = `${name}: ${current}`;
+
+    const pick = document.createElement('input');
+    pick.type = 'color';
+    pick.value = current;
+    pick.setAttribute('aria-label', name);
+    pick.addEventListener('input', () => {
+      sel.palette = { ...sel.palette, [key]: pick.value };
+      // 就地改当前色块，不重建 DOM——重建会在拖动中销毁正在操作的 input
+      sw.style.background = pick.value;
+      sw.classList.add('is-custom');
+      sw.title = `${name}: ${pick.value}`;
+      rebuildLive({ palette: sel.palette });
+    });
+    sw.appendChild(pick);
+    paletteSwatches.appendChild(sw);
+  }
+}
+
+rowsRange?.addEventListener('input', () => {
+  const n = parseInt(rowsRange.value, 10);
+  if (rowsVal) rowsVal.textContent = String(n);
+  rebuildLive({ rows: n });
+});
+speedRange?.addEventListener('input', () => {
+  const v = quantizeSpeed(parseInt(speedRange.value, 10));
+  if (speedVal) speedVal.textContent = speedLabel(v);
+  rebuildLive({ speed: v });
 });
 
 // —— 导出 ——

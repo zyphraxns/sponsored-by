@@ -53,12 +53,15 @@
         gap: 20px;
         flex-wrap: wrap;
       }
-      .field { display: flex; align-items: center; gap: 8px; }
+      /* flex: 0 0 auto —— 控件变多后 field 会被压缩，label 逐字折行、
+         滑块撑满剩余宽度，整个工具栏会糊成一团 */
+      .field { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
       .field-label {
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--ink-quiet);
+        white-space: nowrap;
       }
       .select {
         font: inherit;
@@ -247,6 +250,45 @@
         background: var(--surface-raised);
         color: var(--ink);
       }
+      .range {
+        width: 92px;
+        flex: 0 0 auto;
+        accent-color: var(--ink);
+      }
+      .range-val {
+        font-size: 11px;
+        color: var(--ink-quiet);
+        min-width: 32px;
+        text-align: left;
+        font-variant-numeric: tabular-nums;
+      }
+      .swatches {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .swatch {
+        position: relative;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border-radius: 5px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      .swatch input[type="color"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .swatch.is-custom { border-color: var(--ink); }
     </style>
   </head>
   <body>
@@ -283,6 +325,20 @@
         <div class="field">
           <span class="field-label" id="label-title">标题</span>
           <input class="title-input" id="title-input" type="text" spellcheck="false" autocomplete="off" />
+        </div>
+        <div class="field">
+          <span class="field-label" id="label-rows">行数</span>
+          <input class="range" id="rows-range" type="range" min="1" max="12" value="3" />
+          <span class="range-val" id="rows-val">3</span>
+        </div>
+        <div class="field">
+          <span class="field-label" id="label-speed">速度</span>
+          <input class="range" id="speed-range" type="range" min="50" max="200" value="100" />
+          <span class="range-val" id="speed-val">1×</span>
+        </div>
+        <div class="field">
+          <span class="field-label" id="label-palette">色板</span>
+          <div class="swatches" id="palette-swatches"></div>
         </div>
       </div>
     </header>
