@@ -6,6 +6,8 @@
  * <2 MB 等结构化判据由 scripts/gif-inspect.mjs 对导出的字节核对。
  *
  * URL 参数覆盖（冒烟缩放用）：?fps=2&loop=1&maxColors=16&basePx=540
+ * 图标用 ?icons=github,vercel,stripe（simple-icons slug，逗号分隔）——验证
+ * simple-icons 走完「CDN 预取 → 内联单色 → 栅格化 → 编码」的完整导出链路。
  */
 import { canvasSize } from './core/scene';
 import { createDefaultState } from './app-state';
@@ -15,9 +17,13 @@ import type { SceneState } from './core/types';
 const params = new URLSearchParams(location.search);
 const base = createDefaultState();
 const iconScale = params.has('iconScale') ? Number(params.get('iconScale')) : undefined;
+const iconSlugs = (params.get('icons') ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 const overridden =
   params.has('fps') || params.has('loop') || params.has('maxColors') || params.has('basePx') || iconScale !== undefined;
-const state: SceneState = overridden
+const withTemplate: SceneState = overridden
   ? {
       ...base,
       template: {
@@ -42,6 +48,11 @@ const state: SceneState = overridden
       },
     }
   : base;
+// 图标覆盖：任一 slug 都会让 exportGif 走 sceneIconSvgs 的真实预取路径
+const state: SceneState =
+  iconSlugs.length > 0
+    ? { ...withTemplate, icons: iconSlugs.map((slug) => ({ icon: `simple-icons:${slug}` })) }
+    : withTemplate;
 // R2 探针：中文标题走 locale 'en' 槽位覆盖，渲染栈 Inter→PingFang 回退
 const zhState = { ...state, text: { title: { en: '由以下品牌赞助' } } };
 
@@ -95,8 +106,8 @@ async function firstFrame(blob: Blob): Promise<{ dataUrl: string; width: number;
 }
 
 async function main(): Promise<void> {
-  if (overridden) {
-    set('r-size', `参数覆盖：fps=${state.template.animation.fps} loop=${state.template.animation.loopSeconds} maxColors=${state.template.export.gifMaxColors} basePx=${state.template.canvas.basePx}`);
+  if (overridden || iconSlugs.length > 0) {
+    set('r-size', `参数覆盖：fps=${state.template.animation.fps} loop=${state.template.animation.loopSeconds} maxColors=${state.template.export.gifMaxColors} basePx=${state.template.canvas.basePx}${iconSlugs.length > 0 ? ` icons=${iconSlugs.join(',')}` : ''}`);
   }
 
   // 1. 默认卡（en）；进度写进 title，CDP 轮询可见（渲染进程若崩溃，最后 title 即线索）

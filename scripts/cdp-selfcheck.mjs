@@ -20,7 +20,7 @@
  * 会截到管线跑一半的 DOM（实测两次停在不同步进）。
  */
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -35,6 +35,10 @@ const [vw, vh] = (viewportArg ?? '').split('x').map(Number);
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9300 + (process.pid % 500);
 
+// 用 mkdtemp 而不是 `cdp-sb-${pid}`：PID 会被复用，撞上残留的旧 profile 时
+// Chrome 认为目录已被占用而静默退出（无任何 stderr），表现为「devtools endpoint unreachable」。
+const USER_DATA_DIR = mkdtempSync(join(tmpdir(), 'cdp-sb-'));
+
 const chrome = spawn(
   CHROME,
   [
@@ -47,7 +51,7 @@ const chrome = spawn(
     '--no-proxy-server',
     '--js-flags=--expose-gc', // 验证页在导出间隙主动 gc()，避免帧垃圾拖垮后续提取
     `--remote-debugging-port=${PORT}`,
-    `--user-data-dir=${join(tmpdir(), `cdp-sb-${process.pid}`)}`,
+    `--user-data-dir=${USER_DATA_DIR}`,
     'about:blank',
   ],
   { stdio: ['ignore', 'ignore', 'pipe'] },
@@ -200,4 +204,10 @@ main()
       /* ignore */
     }
     chrome.kill();
+    // 清掉本次的临时 profile（不清理会无限堆积，且下次可能撞锁）
+    try {
+      rmSync(USER_DATA_DIR, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
   });
