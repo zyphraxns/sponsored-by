@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **Upload your own logo.** The icon panel now has an upload button: SVG files are inlined and fitted by their own viewBox, bitmaps (PNG/JPEG/WebP) go in as data URLs rendered with `preserveAspectRatio`, and the original aspect ratio drives the slot width. Uploaded artwork keeps its own colours — it is never force-tinted.
+- **SVGL-only brands are now searchable.** The brand index is the union of simple-icons and SVGL, so marks that were removed from simple-icons (OpenAI among them) are selectable again under the `svgl:` source; their symbol and wordmark both come from SVGL. Searches hit both sources.
 - **Complete brand logotypes.** A ticker item can now render as an official full logotype (mark + name, e.g. OpenAI's flower plus wordmark) when one exists, falling back to the symbol plus the brand name set in the site's own type. 153 official wordmarks come from [SVGL](https://svgl.app) (MIT); everything else stays on simple-icons. Variants are picked by background luminance so a dark card gets the light-on-dark mark. Layout moved from fixed-pitch to variable-width slots to make room.
 - **Colour mode.** Logos keep their own colours by default (a `mono` mode that forces the foreground colour remains available in code). Colour presets raise the GIF palette headroom to 64.
 

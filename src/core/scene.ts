@@ -2,7 +2,7 @@ import type { SceneState, Template, TextLayer, TickerLayer, TickerItem } from '.
 import { fitFontSize } from './layout';
 import { loopDuration, tickerPositions } from './ticker';
 import type { TickerSlot } from './ticker';
-import { isEmoji, isSimpleIcons, isUpload } from './simple-icons';
+import { isEmoji, isSimpleIcons, isSvglIcon, isUpload } from './simple-icons';
 
 /**
  * 预览期字体栈（system font stack 秒开，不等字体加载；导出字体策略见 SPEC 3.2）。
@@ -85,14 +85,30 @@ export function collectIconKeys(state: SceneState): string[] {
  * 调用方自行写入 iconSvgs。返回空对象表示场景无 SVG 图标。
  */
 export async function sceneIconSvgs(state: SceneState): Promise<Record<string, string>> {
-  const keys = collectIconKeys(state).filter((k) => isSimpleIcons(k));
-  if (keys.length === 0) return {};
+  // 先带上 state 里已有的内容（用户上传的 SVG / dataURL 必须原样进导出，
+  // 否则 enriched state 会把它们覆盖丢失）；再为缺失的键补预取。
+  const out: Record<string, string> = { ...(state.iconSvgs ?? {}) };
+  const keys = collectIconKeys(state);
+  if (keys.length === 0) return out;
   const { getIconSvg } = await import('./simple-icons');
-  const out: Record<string, string> = {};
+  const { isDarkColor, loadSvglAssets, getLogoAsset, pickVariant, fetchLogo } = await import('./logos');
+  const darkBg = isDarkColor(state.palette?.bg ?? state.template.palette.bg);
+  await loadSvglAssets();
   await Promise.all(
     keys.map(async (k) => {
-      const slug = k.slice('simple-icons:'.length);
-      out[k] = await getIconSvg(slug);
+      if (out[k] !== undefined) return; // upload 内容 / 上一轮预取，原样保留
+      try {
+        if (isSimpleIcons(k)) {
+          out[k] = await getIconSvg(k.slice('simple-icons:'.length));
+        } else if (isSvglIcon(k)) {
+          // SVGL 独有品牌：key 本身就是规范化品牌名，直接查符号（按背景选明暗）
+          const asset = getLogoAsset(k.slice('svgl:'.length));
+          const url = pickVariant(asset?.symbol, darkBg);
+          if (url) out[k] = await fetchLogo(url);
+        }
+      } catch {
+        /* 单个图标失败不拖垮整批；scene() 对缺内容的图标静默跳过 */
+      }
     }),
   );
   return out;
@@ -269,6 +285,11 @@ function renderTicker(
 function slotWidth(item: TickerItem, logoH: number, state: SceneState): number {
   const key = item.icon;
   if (isEmoji(key)) return logoH;
+  // 用户上传：位图按原始宽高比给宽度（上限 4，防极端长图挤爆一行）
+  if (isUpload(key)) {
+    const a = state.logoAspect?.[key];
+    return a ? logoH * Math.min(a, 4) : logoH;
+  }
   const aspect = state.logoAspect?.[key];
   if (state.logoSvgs?.[key] !== undefined && aspect !== undefined) {
     return logoH * aspect;
@@ -291,6 +312,17 @@ function renderLogoSlot(
   const key = item.icon;
   if (isEmoji(key)) {
     return renderIcon(key, x + logoH / 2, cy, logoH, state.iconSvgs, fg);
+  }
+
+  // 用户上传：内容已在 iconSvgs（SVG 文本或位图 dataURL）。
+  // 位图用 <image> + meet 保比例铺满整个槽；SVG 文本按 viewBox fit。
+  if (isUpload(key)) {
+    const content = state.iconSvgs?.[key] ?? '';
+    if (!content) return '';
+    if (content.startsWith('data:')) {
+      return `<image href="${escapeXml(content)}" x="${f(x)}" y="${f(cy - logoH / 2)}" width="${f(width)}" height="${f(logoH)}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
+    return renderFittedSvg(content, x + width / 2, cy, Math.min(logoH, width), fg, false);
   }
 
   const logoSvg = state.logoSvgs?.[key];
@@ -333,15 +365,45 @@ function forceFill(inner: string, color: string): string {
 }
 
 /**
+ * 把任意 SVG（SVGL 符号 / 用户上传的 SVG 文件）fit 进一个方形槽。
+ *
+ * 与 renderSimpleIconsSvg 不同：SVGL/上传的 SVG 不是 24×24 单 path，
+ * viewBox 各异且可能多 path、带 clipPath——必须按自身 viewBox 缩放居中，
+ * 而不是套 24 的假设。
+ */
+function renderFittedSvg(
+  svg: string,
+  cx: number,
+  cy: number,
+  size: number,
+  fg: string,
+  mono = true,
+): string {
+  const vb = svg.match(/viewBox=["']\s*([-\d.]+)[\s,]+([-\d.]+)[\s,]+([-\d.]+)[\s,]+([-\d.]+)\s*["']/i);
+  const wrapped = svg.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
+  if (!vb || !wrapped) return '';
+  const vx = Number(vb[1]);
+  const vy = Number(vb[2]);
+  const vw = Number(vb[3]);
+  const vh = Number(vb[4]);
+  if (!(vw > 0 && vh > 0)) return '';
+  const s = size / Math.max(vw, vh);
+  // mono=true 用于图标源（SVGL 符号，与 simple-icons 一致的单色约束）；
+  // 用户上传的 logo 不染色——那是人家设计好的成品，染了就毁。
+  const inner = mono ? forceFill(wrapped[1] ?? '', fg) : wrapped[1] ?? '';
+  return `<g transform="translate(${f(cx - (vx + vw / 2) * s)},${f(cy - (vy + vh / 2) * s)}) scale(${f(s)})">${inner}</g>`;
+}
+
+/**
  * 图标渲染（scene() 内部调用）。
  *
- * 三种来源：
- * - emoji:           → <text> 字素，走 EMOJI_FONT
- * - simple-icons:slug → 内联 <svg><path>，强制单色（fg），避免 GIF 调色板被图标自带 hex 吃掉
- * - upload:<name>    → 内联 <svg>，保留原始内容（用户上传的多色图）
+ * 来源与渲染方式：
+ * - emoji:            → <text> 字素，走 EMOJI_FONT
+ * - simple-icons:slug → 提取 path，强制单色（fg），避免 GIF 调色板被图标自带 hex 吃掉
+ * - svgl:<brand>      → 整段内联并按 viewBox fit（可能多 path 带 clipPath），单色化
+ * - upload:<name>     → SVG 文本按 viewBox fit；位图 dataURL 用 <image>（meet 保比例）
  *
- * iconSvgs 由导出层预取注入（见 exporters/fonts.ts 同款模式）；
- * 预览期为空 → 非 emoji 图标静默跳过（不炸渲染）。
+ * iconSvgs 由预览/导出层预取注入；缺内容时静默跳过（不炸渲染）。
  */
 function renderIcon(
   icon: string,
@@ -363,8 +425,8 @@ function renderIcon(
   if (isSimpleIcons(icon)) {
     return renderSimpleIconsSvg(svg, cx, cy, size, fg);
   }
-  if (isUpload(icon)) {
-    return renderInlineSvg(svg, cx, cy, size);
+  if (isSvglIcon(icon)) {
+    return renderFittedSvg(svg, cx, cy, size, fg);
   }
   return '';
 }
@@ -381,11 +443,6 @@ function renderSimpleIconsSvg(svg: string, cx: number, cy: number, size: number,
   ].join('');
 }
 
-/** 用户上传 SVG：保留原始内容，按 size 缩放居中 */
-function renderInlineSvg(svg: string, cx: number, cy: number, size: number): string {
-  const half = size / 2;
-  return `<g transform="translate(${f(cx - half)},${f(cy - half)}) scale(${f(size / 24)})">${svg}</g>`;
-}
 
 /** 提取首个 <path> 的 d 属性（simple-icons 均为单路径） */
 function extractPathD(svg: string): string | null {

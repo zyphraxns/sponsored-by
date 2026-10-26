@@ -1,4 +1,4 @@
-import { canvasSize, loopSecondsFor, scene, sceneLogoSvgs } from './core/scene';
+import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneLogoSvgs } from './core/scene';
 import { createDefaultState } from './app-state';
 import { DEFAULT_TEMPLATE_ID, getTemplate, templateChoices } from './templates';
 import {
@@ -12,6 +12,7 @@ import {
 import type { PlatformId } from './core/presets';
 import { ui } from './i18n';
 import type { Locale, Ratio, SceneState, TickerItem } from './core/types';
+import type { BrandHit } from './core/simple-icons';
 import { exportGif, gifFilename } from './exporters/gif';
 import { exportPng } from './exporters/png';
 import { pngFilename, svgFilename, svgFileContent, svgToBlob } from './exporters/svg';
@@ -188,6 +189,7 @@ function refreshChrome(): void {
     ['export-svg', t.exportSvg],
     ['icon-close', t.iconPanelClose],
     ['icon-clear', t.iconPanelClear],
+    ['icon-upload-btn', t.uploadBtn],
   ] as const) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
@@ -249,35 +251,22 @@ function refreshChrome(): void {
 let lastDarkBg: boolean | null = null;
 
 async function hydrateIcons(): Promise<void> {
-  const { isEmoji, isSimpleIcons, getIconSvg } = await import('./core/simple-icons');
+  const { isEmoji } = await import('./core/simple-icons');
   const need = state.icons.map((i) => i.icon).filter((k) => !isEmoji(k));
   if (need.length === 0) return;
   const bg = state.palette?.bg ?? state.template.palette.bg;
   const { isDarkColor } = await import('./core/logos');
   const darkBg = isDarkColor(bg);
-  const have = state.iconSvgs ?? {};
-  const missing = need.filter((k) => !(k in have));
-  if (missing.length > 0) {
-    const next: Record<string, string> = { ...have };
-    await Promise.all(
-      missing.map(async (key) => {
-        if (!isSimpleIcons(key)) return; // upload: 由调用方直接提供内容
-        try {
-          next[key] = await getIconSvg(key.slice('simple-icons:'.length));
-        } catch {
-          /* 单个图标拉取失败不拖垮整批 */
-        }
-      }),
-    );
-    state.iconSvgs = next;
-  }
-  // 官方完整字标：有则替代「符号 + 文字」。
   // 背景明暗翻转时（白底 ↔ 深底）必须换变体，否则深字标在深底上直接消失。
   if (lastDarkBg !== null && lastDarkBg !== darkBg) {
     state.logoSvgs = {};
     state.logoAspect = {};
   }
   lastDarkBg = darkBg;
+  // 符号：sceneIconSvgs 会保留已有内容（上传的 SVG / dataURL）并补齐
+  // simple-icons 与 svgl: 的缺口（含按背景挑明暗变体）。
+  state.iconSvgs = await sceneIconSvgs(state);
+  // 官方完整字标：有则替代「符号 + 文字」。
   const { svgs, aspect } = await sceneLogoSvgs(state, bg);
   if (Object.keys(svgs).length > 0) {
     state.logoSvgs = { ...(state.logoSvgs ?? {}), ...svgs };
@@ -381,7 +370,7 @@ const titleInput = document.getElementById('title-input') as HTMLInputElement | 
 let iconSearchQuery = '';
 let iconIndexPromise: Promise<string[]> | null = null;
 
-/** 打开面板：首次加载索引，之后只渲染缓存结果 */
+/** 打开面板：首次加载索引（simple-icons + SVGL 元数据），之后只渲染缓存结果 */
 async function openIconPanel(): Promise<void> {
   if (!iconPanel) return;
   if (!iconIndexPromise) iconIndexPromise = loadIconIndex();
@@ -392,8 +381,24 @@ async function openIconPanel(): Promise<void> {
 }
 
 async function loadIconIndex(): Promise<string[]> {
-  const { searchIcons } = await import('./core/simple-icons');
-  return searchIcons('');
+  const { searchBrands } = await import('./core/simple-icons');
+  await searchBrands(''); // 预热：simple-icons 索引 + SVGL 元数据
+  return [];
+}
+
+/** 面板预览用的符号 SVG：simple-icons 走自己的 CDN；svgl: 走 SVGL（浅色 UI 用 light 变体） */
+async function brandPreviewSvg(hit: BrandHit): Promise<string | undefined> {
+  const { getIconSvg } = await import('./core/simple-icons');
+  if (hit.key.startsWith('simple-icons:')) {
+    return getIconSvg(hit.key.slice('simple-icons:'.length)).catch(() => undefined);
+  }
+  if (hit.key.startsWith('svgl:')) {
+    const { loadSvglAssets, getLogoAsset, pickVariant, fetchLogo } = await import('./core/logos');
+    await loadSvglAssets();
+    const url = pickVariant(getLogoAsset(hit.label)?.symbol, false);
+    return url ? fetchLogo(url).catch(() => undefined) : undefined;
+  }
+  return undefined;
 }
 
 async function renderIconGrid(): Promise<void> {
@@ -403,16 +408,16 @@ async function renderIconGrid(): Promise<void> {
   if (iconHint) iconHint.textContent = t.iconPanelHint;
   iconGrid.textContent = t.iconPanelLoading;
 
-  const { searchIcons, getIconSvg, getIconName, EMOJI_PRESETS } = await import('./core/simple-icons');
-  const slugs = await searchIcons(iconSearchQuery);
+  const { searchBrands, EMOJI_PRESETS } = await import('./core/simple-icons');
+  const hits = await searchBrands(iconSearchQuery);
 
-  // emoji 快捷面板 + simple-icons 结果，共用同一网格。
-  // 搜索时不再显示 emoji——用户在找品牌，emjio 只是噪音。
-  const cells: Array<{ key: string; label: string; svg?: Promise<string>; emoji?: string }> = [];
+  // emoji 快捷面板 + 品牌结果，共用同一网格。
+  // 搜索时不再显示 emoji——用户在找品牌，emoji 只是噪音。
+  const cells: Array<{ key: string; label: string; svg?: Promise<string | undefined>; emoji?: string }> = [];
   if (!iconSearchQuery) {
     for (const e of EMOJI_PRESETS) cells.push({ key: `emoji:${e}`, label: '', emoji: e });
   }
-  for (const s of slugs) cells.push({ key: `simple-icons:${s}`, label: getIconName(s), svg: getIconSvg(s) });
+  for (const h of hits) cells.push({ key: h.key, label: h.label, svg: brandPreviewSvg(h) });
 
   iconGrid.replaceChildren();
   for (const cell of cells) {
@@ -435,13 +440,11 @@ async function renderIconGrid(): Promise<void> {
       svg.style.height = '32px';
       cell.svg
         .then((text) => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(text, 'image/svg+xml');
-          const path = doc.querySelector('path');
-          if (path) {
-            path.setAttribute('fill', 'currentColor');
-            svg.appendChild(path);
-          }
+          if (!text) return;
+          const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+          // 整段内联而不是只取第一个 path：SVGL 的符号是多 path + clipPath 的组合，
+          // 只取第一个会把 logo 缺一半。上色交给 CSS（.icon-cell svg path）。
+          svg.innerHTML = doc.documentElement.innerHTML;
         })
         .catch(() => {});
       visual.appendChild(svg);
@@ -484,6 +487,55 @@ iconClear?.addEventListener('click', () => {
   sel.icons = [];
   apply({ icons: sel.icons });
   renderIconGrid();
+});
+
+// —— 上传 logo ——
+//
+// SVG 文件读文本（渲染走 renderFittedSvg，按 viewBox fit）；
+// 位图读 dataURL（渲染走 <image>，meet 保比例），宽高比记进 logoAspect 供布局用。
+// 内容直接写 state.iconSvgs：apply() 重建时 carryAssets 会原样带过去，导出链路
+// 的 sceneIconSvgs 也以 state.iconSvgs 为底合并——上传内容全程不丢。
+const uploadInput = document.getElementById('icon-upload') as HTMLInputElement | null;
+const uploadBtn = document.getElementById('icon-upload-btn') as HTMLButtonElement | null;
+
+uploadBtn?.addEventListener('click', () => uploadInput?.click());
+
+uploadInput?.addEventListener('change', () => {
+  const files = [...(uploadInput.files ?? [])];
+  uploadInput.value = '';
+  void (async () => {
+    for (const file of files) {
+      const key = `upload:${file.name}`;
+      try {
+        if (file.type.includes('svg') || file.name.toLowerCase().endsWith('.svg')) {
+          state.iconSvgs = { ...(state.iconSvgs ?? {}), [key]: await file.text() };
+        } else {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(String(r.result));
+            r.onerror = () => reject(r.error ?? new Error('read failed'));
+            r.readAsDataURL(file);
+          });
+          state.iconSvgs = { ...(state.iconSvgs ?? {}), [key]: dataUrl };
+          // 原始宽高比 → 布局给这个槽合适的宽度（上限 4，防极端长图）
+          const aspect = await new Promise<number | undefined>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(img.naturalWidth > 0 ? img.naturalWidth / img.naturalHeight : undefined);
+            img.onerror = () => resolve(undefined);
+            img.src = dataUrl;
+          });
+          if (aspect) state.logoAspect = { ...(state.logoAspect ?? {}), [key]: aspect };
+        }
+        sel.icons.push({ icon: key });
+      } catch {
+        /* 单个文件失败跳过，不中断批量 */
+      }
+    }
+    if (files.length > 0) {
+      apply({ icons: sel.icons });
+      renderIconGrid();
+    }
+  })();
 });
 
 // 标题输入：写入 sel.text（这是重建 state 的唯一来源）并立刻同步到 state.text，

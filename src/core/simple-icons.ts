@@ -208,6 +208,53 @@ export function isSimpleIcons(icon: string): boolean {
   return icon.startsWith('simple-icons:');
 }
 
+/** SVGL 独有品牌（simple-icons 里没有的，如 OpenAI）——符号与字标都来自 SVGL */
+export function isSvglIcon(icon: string): boolean {
+  return icon.startsWith('svgl:');
+}
+
 export function isUpload(icon: string): boolean {
   return icon.startsWith('upload:');
+}
+
+/** 搜索结果单元：key 直接用作 TickerItem.icon */
+export interface BrandHit {
+  key: string;
+  label: string;
+}
+
+/**
+ * 合并两个来源的品牌搜索。
+ *
+ * 只用 simple-icons 做索引会漏掉 SVGL 独有的品牌（OpenAI 被商标方要求从
+ * simple-icons 下架，但 SVGL 一直有它的官方符号和字标）。所以：
+ * - simple-icons 全集 → `simple-icons:<slug>`
+ * - SVGL 里 normalize 后不在 simple-icons 集合的 → `svgl:<品牌名规范化>`
+ *   （这类品牌没有 simple-icons 符号，符号与字标都从 SVGL 取）
+ */
+export async function searchBrands(query: string): Promise<BrandHit[]> {
+  const { loadSvglAssets } = await import('./logos');
+  const [index, svgl] = await Promise.all([loadIndex(), loadSvglAssets()]);
+  const slugSet = new Set(index);
+
+  const pool: BrandHit[] = index.map((s) => ({ key: `simple-icons:${s}`, label: getIconName(s) }));
+  for (const [nk, asset] of svgl) {
+    if (!slugSet.has(nk)) pool.push({ key: `svgl:${nk}`, label: asset.title });
+  }
+
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    // 空搜索显示热门品牌（而不是字母序排头的冷门 slug）
+    const popular = new Set(POPULAR.map(([slug]) => `simple-icons:${slug}`));
+    const known = pool.filter((h) => popular.has(h.key));
+    return known.length >= 24 ? known : pool.slice(0, 60);
+  }
+  const nq = q.replace(/[^a-z0-9]/g, '');
+  return pool
+    .filter((h) => {
+      const id = h.key.split(':')[1] ?? '';
+      if (id.includes(q) || h.label.toLowerCase().includes(q)) return true;
+      return h.label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(nq);
+    })
+    .slice(0, 60);
 }

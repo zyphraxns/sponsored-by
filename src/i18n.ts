@@ -51,6 +51,8 @@ export interface UiStrings {
   iconPanelLoading: string;
   /** 图标面板清空按钮 */
   iconPanelClear: string;
+  /** 上传 logo 按钮 */
+  uploadBtn: string;
   /** 图标面板关闭按钮 */
   iconPanelClose: string;
   /** 图标面板底部提示 */
@@ -87,6 +89,7 @@ export const UI: Record<Locale, UiStrings> = {
     iconPanelSearch: 'Search brands…',
     iconPanelLoading: 'Loading…',
     iconPanelClear: 'Clear',
+    uploadBtn: 'Upload',
     iconPanelClose: 'Close',
     iconPanelHint: 'Click to toggle. simple-icons 3000+ brand marks, single-color SVG.',
     exportGif: 'Export GIF',
@@ -124,6 +127,7 @@ export const UI: Record<Locale, UiStrings> = {
     iconPanelSearch: '搜索品牌…',
     iconPanelLoading: '加载中…',
     iconPanelClear: '清空',
+    uploadBtn: '上传',
     iconPanelClose: '关闭',
     iconPanelHint: '点击切换选中状态。simple-icons 3000+ 品牌矢量，单色 SVG。',
     exportGif: '导出 GIF',

@@ -239,6 +239,7 @@
         padding: 12px 18px;
         border-top: 1px solid var(--hairline);
       }
+      .icon-panel__actions { display: flex; gap: 8px; }
       .icon-panel__hint { font-size: 11px; color: var(--ink-quiet); }
       .icon-cell svg path { fill: var(--ink); }
       .title-input {
@@ -353,7 +354,11 @@
         <div class="icon-grid" id="icon-grid" role="listbox"></div>
         <div class="icon-panel__footer">
           <span class="icon-panel__hint" id="icon-hint"></span>
-          <button class="btn" type="button" id="icon-clear">清空</button>
+          <div class="icon-panel__actions">
+            <input type="file" id="icon-upload" accept=".svg,image/png,image/jpeg,image/webp" multiple hidden />
+            <button class="btn" type="button" id="icon-upload-btn">上传</button>
+            <button class="btn" type="button" id="icon-clear">清空</button>
+          </div>
         </div>
       </div>
     </div>
