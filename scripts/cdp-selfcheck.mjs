@@ -38,7 +38,9 @@ const PORT = 9300 + (process.pid % 500);
 const chrome = spawn(
   CHROME,
   [
-    '--headless=old',
+    // Chrome 132 起只剩 new headless（--headless=old 已被移除，传旧值会直接不启动）。
+    // 纯 --headless 在 112+ 等价于 new headless，跨版本最稳。
+    '--headless',
     '--no-sandbox',
     '--disable-gpu',
     '--disable-dev-shm-usage',
@@ -85,7 +87,9 @@ async function findPageTarget() {
   for (let i = 0; i < 60; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-      const page = list.find((t) => t.type === 'page');
+      // new headless（Chrome 132+）把初始 target 的 type 报成 "other" 而非 "page"，
+      // 死等 type === 'page' 会一直空转到超时。优先 page，退而取任何可连的 target。
+      const page = list.find((t) => t.type === 'page') ?? list.find((t) => t.webSocketDebuggerUrl);
       if (page) return page;
     } catch {
       /* 端口尚未就绪 */
