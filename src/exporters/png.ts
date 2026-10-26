@@ -1,4 +1,4 @@
-import { canvasSize, scene, sceneIconSvgs, sceneTexts } from '../core/scene';
+import { canvasSize, scene, sceneIconSvgs, sceneLogoSvgs, sceneTexts } from '../core/scene';
 import type { SceneState, TextLayer } from '../core/types';
 import { svgForRaster } from './fonts';
 
@@ -133,7 +133,11 @@ export async function rasterizeScene(
 export async function exportPng(state: SceneState, t: number): Promise<Blob> {
   const { w, h } = canvasSize(state.template, state.ratio);
   const iconSvgs = await sceneIconSvgs(state);
-  const enriched: SceneState = { ...state, iconSvgs };
+  // 官方完整字标（有则替代「符号 + 品牌名」）；变体按背景亮度挑，
+  // 否则深底会拿到黑色字标直接消失
+  const bg = state.palette?.bg ?? state.template.palette.bg;
+  const { svgs: logoSvgs, aspect: logoAspect } = await sceneLogoSvgs(state, bg);
+  const enriched: SceneState = { ...state, iconSvgs, logoSvgs, logoAspect };
   const svg = await svgForRaster(scene(enriched, t), sceneTexts(enriched));
   const canvas = await rasterizeScene(svg, w, h, enriched);
   const blob = await new Promise<Blob | null>((resolve) => {

@@ -6,8 +6,9 @@
  * <2 MB 等结构化判据由 scripts/gif-inspect.mjs 对导出的字节核对。
  *
  * URL 参数覆盖（冒烟缩放用）：?fps=2&loop=1&maxColors=16&basePx=540
- * 图标用 ?icons=github,vercel,stripe（simple-icons slug，逗号分隔）——验证
- * simple-icons 走完「CDN 预取 → 内联单色 → 栅格化 → 编码」的完整导出链路。
+ * 图标用 ?icons=github=GitHub,vercel=Vercel（slug=展示名，逗号分隔）——
+ * 展示名会让 scene 渲染成完整 logo（官方字标或符号+文字），
+ * 验证 simple-icons / SVGL 字标走完「预取 → 内联 → 栅格化 → 编码」的导出链路。
  */
 import { canvasSize } from './core/scene';
 import { createDefaultState } from './app-state';
@@ -48,10 +49,17 @@ const withTemplate: SceneState = overridden
       },
     }
   : base;
-// 图标覆盖：任一 slug 都会让 exportGif 走 sceneIconSvgs 的真实预取路径
+// 图标覆盖：任一项都会让导出走真实的预取路径；`slug=名称` 会渲染完整 logo
 const state: SceneState =
   iconSlugs.length > 0
-    ? { ...withTemplate, icons: iconSlugs.map((slug) => ({ icon: `simple-icons:${slug}` })) }
+    ? {
+        ...withTemplate,
+        icons: iconSlugs.map((s) => {
+          const eq = s.indexOf('=');
+          if (eq > 0) return { icon: `simple-icons:${s.slice(0, eq)}`, label: s.slice(eq + 1) || undefined };
+          return { icon: `simple-icons:${s}` };
+        }),
+      }
     : withTemplate;
 // R2 探针：中文标题走 locale 'en' 槽位覆盖，渲染栈 Inter→PingFang 回退
 const zhState = { ...state, text: { title: { en: '由以下品牌赞助' } } };

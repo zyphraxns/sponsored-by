@@ -3,52 +3,76 @@ import type { TickerItem } from './types';
 /**
  * 无缝滚动数学。
  *
- * 核心不变量：内容带周期 = itemCount * spacing。
+ * 核心不变量：内容带周期 = Σ(单元宽度 + gap)。
  * 滚动偏移每推进一个周期，画面与初始完全一致 → 循环播放无跳帧（SPEC 5.1）。
+ *
+ * ── 2026-10-26 重写 ──
+ * v0.2 之前所有单元等宽（只有图标），故周期 = itemCount × spacing。
+ * 加入「完整 logo」（官方字标 / 符号+品牌名）后单元宽度不再相等
+ * （`X` 与 `Tailwind CSS` 差数倍），等距公式直接失效，
+ * 必须改成按各单元实际宽度累积偏移。
  */
+
+export interface TickerSlot {
+  item: TickerItem;
+  /** 该单元自身宽度（不含单元间 gap） */
+  width: number;
+}
 
 export interface Positioned {
   item: TickerItem;
   x: number;
+  width: number;
 }
 
 /** 一个内容周期的像素宽度 */
-export function cycleWidth(itemCount: number, spacing: number): number {
-  return itemCount * spacing;
+export function cycleWidth(slots: TickerSlot[], gap: number): number {
+  return slots.reduce((sum, slot) => sum + slot.width + gap, 0);
 }
 
 /**
  * 生成一行在时刻 t 的全部项位置（含左右跨边界的重复项，由调用方 clipPath 裁剪）。
- * 只保留可见窗口 [-spacing, rowWidth + spacing] 内的位置，控制 SVG 节点数。
+ * 只保留可见窗口内的位置，控制 SVG 节点数。
  */
 export function tickerPositions(
-  items: TickerItem[],
-  spacing: number,
+  slots: TickerSlot[],
+  gap: number,
   rowWidth: number,
   rowPhase: number,
   t: number,
   rowSpeed: number,
   loopSeconds: number,
 ): Positioned[] {
-  const cycle = cycleWidth(items.length, spacing);
+  if (slots.length === 0) return [];
+  const offsets: number[] = [];
+  let acc = 0;
+  for (const slot of slots) {
+    offsets.push(acc);
+    acc += slot.width + gap;
+  }
+  const cycle = acc;
   if (cycle <= 0) return [];
-  // 行级错相以「周期」为单位；项级相位以「间距」为单位（更直观的微调）
+
+  // 行级错相以「周期」为单位；项级相位同样以周期为单位（0..1 均匀错开）
   const scroll = rowPhase * cycle + t * rowSpeed * (cycle / loopSeconds);
-  // k 平铺范围必须由 scroll 实际值推导：t 在 [0, loop) 内推进时，
-  // scroll 最大可接近两个周期（rowPhase→1 且推进近一个整周期）。
-  // 曾按 scroll∈[0,cycle) 写死 [-1, tiles]，导致循环点附近左侧可见项被丢掉
-  // （scene 级无缝单测抓到：第三行 t=loop 时少两个图标）。
-  const pad = spacing; // 左右各留一个图标宽度的出血余量
+  // 出血余量取「最宽单元」，否则宽字标会在边缘被提前裁掉
+  const widest = slots.reduce((m, s) => Math.max(m, s.width), 0);
+  const pad = gap + widest;
+  // k 平铺范围由 scroll 实际值推导：t 在 [0, loop) 内推进时 scroll 可接近两个周期。
   const kMin = Math.floor((-pad - scroll) / cycle) - 1;
   const kMax = Math.ceil((rowWidth + pad - scroll) / cycle) + 1;
   const out: Positioned[] = [];
   for (let k = kMin; k <= kMax; k++) {
-    items.forEach((item, j) => {
-      const x = j * spacing + (item.phase ?? 0) * spacing + scroll + k * cycle;
-      if (x >= -pad && x <= rowWidth + pad) {
-        out.push({ item, x });
+    for (let j = 0; j < slots.length; j++) {
+      const slot = slots[j];
+      const offset = offsets[j];
+      if (!slot || offset === undefined) continue;
+      const x = offset + (slot.item.phase ?? 0) * cycle + scroll + k * cycle;
+      // 判可见要考虑单元自身宽度：宽字标只要左边缘还在窗口内就得画
+      if (x + slot.width >= -pad && x <= rowWidth + pad) {
+        out.push({ item: slot.item, x, width: slot.width });
       }
-    });
+    }
   }
   return out;
 }

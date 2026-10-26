@@ -1,4 +1,4 @@
-import { canvasSize, loopSecondsFor, scene } from './core/scene';
+import { canvasSize, loopSecondsFor, scene, sceneLogoSvgs } from './core/scene';
 import { createDefaultState } from './app-state';
 import { DEFAULT_TEMPLATE_ID, getTemplate, templateChoices } from './templates';
 import {
@@ -195,6 +195,12 @@ function refreshChrome(): void {
 
   if (iconSearch) iconSearch.placeholder = t.iconPanelSearch;
   if (iconHint) iconHint.textContent = t.iconPanelHint;
+  // 按钮本体也是 chrome：index.html 里的静态文字是中文，英文界面下会露出来
+  const iconBtnEl = document.getElementById('icon-btn');
+  if (iconBtnEl) {
+    iconBtnEl.textContent = t.iconLabel;
+    iconBtnEl.title = t.iconPanelTitle;
+  }
 
   // 行数 / 速度滑块同步 UI（读 state 而非 sel：sel.rows 可能是 undefined）
   if (rowsRange) rowsRange.value = String(state.rows);
@@ -233,6 +239,42 @@ function refreshChrome(): void {
 }
 
 /**
+ * 预览期补齐品牌图标 SVG。
+ *
+ * scene() 对「没有出现在 iconSvgs 里的非 emoji 图标」是**静默跳过**的（首屏不等 CDN）。
+ * 所以选了品牌图标却不预取，画布上什么都不会出现——用户会以为功能坏了。
+ * 取完写回 state 即可：rAF 循环每帧重渲染，下一帧自动出现。
+ */
+async function hydrateIcons(): Promise<void> {
+  const { isEmoji, isSimpleIcons, getIconSvg } = await import('./core/simple-icons');
+  const need = state.icons.map((i) => i.icon).filter((k) => !isEmoji(k));
+  if (need.length === 0) return;
+  const have = state.iconSvgs ?? {};
+  const missing = need.filter((k) => !(k in have));
+  if (missing.length > 0) {
+    const next: Record<string, string> = { ...have };
+    await Promise.all(
+      missing.map(async (key) => {
+        if (!isSimpleIcons(key)) return; // upload: 由调用方直接提供内容
+        try {
+          next[key] = await getIconSvg(key.slice('simple-icons:'.length));
+        } catch {
+          /* 单个图标拉取失败不拖垮整批 */
+        }
+      }),
+    );
+    state.iconSvgs = next;
+  }
+  // 官方完整字标：有则替代「符号 + 文字」
+  const bg = state.palette?.bg ?? state.template.palette.bg;
+  const { svgs, aspect } = await sceneLogoSvgs(state, bg);
+  if (Object.keys(svgs).length > 0) {
+    state.logoSvgs = { ...(state.logoSvgs ?? {}), ...svgs };
+    state.logoAspect = { ...(state.logoAspect ?? {}), ...aspect };
+  }
+}
+
+/**
  * 滑块 / 取色器这类连续输入的轻量重建。
  *
  * 与 apply() 的两点区别，都是踩过的坑：
@@ -258,6 +300,7 @@ function apply(partial: Partial<Selection>): void {
   if (reducedMotion) renderAt(0);
   refreshChrome();
   setStatus('');
+  void hydrateIcons(); // 品牌图标是异步 CDN 拉取，不阻塞首帧
 }
 
 platformSelect?.addEventListener('change', () => {
@@ -331,9 +374,12 @@ async function renderIconGrid(): Promise<void> {
   const { searchIcons, getIconSvg, getIconName, EMOJI_PRESETS } = await import('./core/simple-icons');
   const slugs = await searchIcons(iconSearchQuery);
 
-  // emoji 快捷面板 + simple-icons 结果，共用同一网格
+  // emoji 快捷面板 + simple-icons 结果，共用同一网格。
+  // 搜索时不再显示 emoji——用户在找品牌，emjio 只是噪音。
   const cells: Array<{ key: string; label: string; svg?: Promise<string>; emoji?: string }> = [];
-  for (const e of EMOJI_PRESETS) cells.push({ key: `emoji:${e}`, label: e, emoji: e });
+  if (!iconSearchQuery) {
+    for (const e of EMOJI_PRESETS) cells.push({ key: `emoji:${e}`, label: '', emoji: e });
+  }
   for (const s of slugs) cells.push({ key: `simple-icons:${s}`, label: getIconName(s), svg: getIconSvg(s) });
 
   iconGrid.replaceChildren();
@@ -370,16 +416,19 @@ async function renderIconGrid(): Promise<void> {
     }
     btn.appendChild(visual);
 
-    const label = document.createElement('span');
-    label.textContent = cell.label;
-    btn.appendChild(label);
+    // emoji 格子不带文字标签（label 为空）——emoji 本身就是图标，重复显示两遍纯属噪音
+    if (cell.label) {
+      const label = document.createElement('span');
+      label.textContent = cell.label;
+      btn.appendChild(label);
+    }
 
     btn.addEventListener('click', () => {
       const idx = sel.icons.findIndex((i) => i.icon === cell.key);
       if (idx >= 0) {
         sel.icons.splice(idx, 1);
       } else {
-        sel.icons.push({ icon: cell.key });
+        sel.icons.push({ icon: cell.key, label: cell.label || undefined });
       }
       apply({ icons: sel.icons });
       renderIconGrid();

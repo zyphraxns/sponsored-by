@@ -1,6 +1,6 @@
 import { Encoder } from 'modern-gif';
 import type { DitherMethod } from 'modern-gif';
-import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneTexts } from '../core/scene';
+import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneLogoSvgs, sceneTexts } from '../core/scene';
 import { frameCount, frameDelayMs, frameTime } from '../core/frames';
 import type { ExportProgress } from '../core/frames';
 import type { SceneState } from '../core/types';
@@ -33,7 +33,11 @@ export async function exportGif(state: SceneState, onProgress?: GifProgress): Pr
   const texts = sceneTexts(state);
   // 图标同理：整段动画用到的 SVG 图标只预取一次，写入 iconSvgs 供 scene() 渲染
   const iconSvgs = await sceneIconSvgs(state);
-  const enriched: SceneState = { ...state, iconSvgs };
+  // 官方完整字标（有则替代「符号 + 品牌名」）；变体按背景亮度挑，
+  // 否则深底会拿到黑色字标直接消失
+  const bg = state.palette?.bg ?? state.template.palette.bg;
+  const { svgs: logoSvgs, aspect: logoAspect } = await sceneLogoSvgs(state, bg);
+  const enriched: SceneState = { ...state, iconSvgs, logoSvgs, logoAspect };
 
   const encoder = new Encoder({
     width: w,

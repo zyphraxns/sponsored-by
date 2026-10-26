@@ -16,7 +16,7 @@ import {
   getFirstEncodableVideoCodec,
 } from 'mediabunny';
 import type { VideoCodec } from 'mediabunny';
-import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneTexts } from '../core/scene';
+import { canvasSize, loopSecondsFor, scene, sceneIconSvgs, sceneLogoSvgs, sceneTexts } from '../core/scene';
 import type { ExportProgress } from '../core/frames';
 import type { SceneState } from '../core/types';
 import { rasterizeScene, rasterizeToCanvas } from './png';
@@ -105,7 +105,11 @@ export async function exportMp4(
 
   const texts = sceneTexts(state);
   const iconSvgs = await sceneIconSvgs(state);
-  const enriched: SceneState = { ...state, iconSvgs };
+  // 官方完整字标（有则替代「符号 + 品牌名」）；变体按背景亮度挑，
+  // 否则深底会拿到黑色字标直接消失
+  const bg = state.palette?.bg ?? state.template.palette.bg;
+  const { svgs: logoSvgs, aspect: logoAspect } = await sceneLogoSvgs(state, bg);
+  const enriched: SceneState = { ...state, iconSvgs, logoSvgs, logoAspect };
   for (let i = 0; i < total; i++) {
     const t = i / fps;
     const svg = await svgForRaster(scene(enriched, t), texts);

@@ -8,6 +8,11 @@ export type Locale = 'en' | 'zh';
 export interface TickerItem {
   /** 'emoji:💸' | 'simple-icons:openai' | 'upload:<name>' */
   icon: string;
+  /**
+   * 品牌展示名（如 'GitHub'）。有值时渲染成完整 logo：
+   * 优先用官方字标，没有字标则「符号 + 这段文字」。emoji 项留空。
+   */
+  label?: string;
   /** 项级相位（以「间距」为单位），叠加在行级错相之上 */
   phase?: number;
   /** 项级速度倍率。M3 启用：须为有理数比，保证全局 LCM 周期有限 */
@@ -81,4 +86,18 @@ export interface SceneState {
   palette?: Partial<Template['palette']>;
   /** 预取的图标 SVG（simple-icons / upload），key = icon 字符串。scene() 据此渲染非 emoji 图标 */
   iconSvgs?: Record<string, string>;
+  /**
+   * 官方完整字标 SVG（SVGL），key = icon 字符串。存在时替代「符号 + 文字」。
+   * 由预览/导出层按背景亮度选 light/dark 变体后注入——scene() 保持纯函数。
+   */
+  logoSvgs?: Record<string, string>;
+  /** 字标宽高比（key = icon 字符串），布局算宽度用 */
+  logoAspect?: Record<string, number>;
+  /**
+   * 品牌名在 1em 字号下的宽度（key = icon 字符串）。
+   * scene() 不能调用 canvas.measureText，故由调用方量好注入。
+   */
+  labelEm?: Record<string, number>;
+  /** logo 着色：brand = 保留原色 / 按背景挑明暗变体；mono = 统一前景色 */
+  logoMode?: 'brand' | 'mono';
 }

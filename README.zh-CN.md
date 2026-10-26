@@ -4,7 +4,7 @@
 全程在浏览器里跑 —— 无后端、不上传、不用注册。</p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="一张写着 SPONSORED BY 的动态卡片，下方多行真实品牌标志（GitHub、Vercel、Stripe、Figma、OpenAI、Tesla、Nike、Apple、Spotify、Netflix）滚动而过" width="600">
+  <img src="docs/demo.gif" alt="一张写着 SPONSORED BY 的动态卡片，下方多行官方品牌字标（GitHub、Vercel、Google、Spotify、NVIDIA、Tailwind CSS、Tesla、Nike、Figma）滚动而过" width="600">
 </p>
 
 <p align="center">

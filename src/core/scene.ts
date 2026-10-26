@@ -1,6 +1,7 @@
 import type { SceneState, Template, TextLayer, TickerLayer, TickerItem } from './types';
 import { fitFontSize } from './layout';
 import { loopDuration, tickerPositions } from './ticker';
+import type { TickerSlot } from './ticker';
 import { isEmoji, isSimpleIcons, isUpload } from './simple-icons';
 
 /**
@@ -18,6 +19,11 @@ const BASE_LOOP_SECONDS = 4;
 
 /** ticker 图标默认缩放（相对行高）；可被模板 iconScale 覆盖 */
 export const DEFAULT_ICON_SCALE = 0.62;
+
+/** 品牌名文字高度相对 logo 视觉高度的比例 */
+const LABEL_SCALE = 0.62;
+/** 符号与品牌名之间的间距（相对 logo 视觉高度） */
+const LABEL_GAP = 0.28;
 
 const XML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
@@ -90,6 +96,59 @@ export async function sceneIconSvgs(state: SceneState): Promise<Record<string, s
     }),
   );
   return out;
+}
+
+/**
+ * 预取官方字标 SVG（导出 / 预览共用）。
+ *
+ * 与 sceneIconSvgs 同一套「先取好、再注入 state」的模式，保证 scene() 仍是纯函数。
+ * 变体按背景亮度选（深底→dark 版白字标），否则黑底上黑色字标直接看不见。
+ * 取不到的品牌由调用方回退成「符号 + 程序排版品牌名」，不会空白。
+ */
+export async function sceneLogoSvgs(
+  state: SceneState,
+  bg: string,
+): Promise<{ svgs: Record<string, string>; aspect: Record<string, number> }> {
+  const items = collectLogoItems(state);
+  const svgs: Record<string, string> = {};
+  const aspect: Record<string, number> = {};
+  if (items.length === 0) return { svgs, aspect };
+
+  const { loadSvglAssets, getLogoAsset, pickVariant, fetchLogo, svgAspect, isDarkColor } = await import('./logos');
+  await loadSvglAssets();
+  const darkBg = isDarkColor(bg);
+
+  await Promise.all(
+    items.map(async ({ key, label }) => {
+      const asset = getLogoAsset(label);
+      const url = pickVariant(asset?.wordmark, darkBg);
+      if (!url) return;
+      try {
+        const text = await fetchLogo(url);
+        svgs[key] = text;
+        const a = svgAspect(text);
+        if (a) aspect[key] = a;
+      } catch {
+        /* 单个失败 → 回退符号+文字 */
+      }
+    }),
+  );
+  return { svgs, aspect };
+}
+
+/** 场景内所有「非 emoji 且有品牌名」的单元（去重，key = icon 字符串） */
+function collectLogoItems(state: SceneState): { key: string; label: string }[] {
+  const seen = new Map<string, string>();
+  for (const layer of state.template.layers) {
+    if (layer.type !== 'ticker') continue;
+    const items: TickerItem[] = state.icons.length > 0 ? state.icons : layer.items;
+    for (const item of items) {
+      if (isEmoji(item.icon)) continue;
+      if (!item.label) continue;
+      if (!seen.has(item.icon)) seen.set(item.icon, item.label);
+    }
+  }
+  return [...seen].map(([key, label]) => ({ key, label }));
 }
 
 /**
@@ -167,8 +226,15 @@ function renderTicker(
   const boxW = bw * w;
   const boxH = bh * h;
   const rowSlot = boxH / rows;
-  const iconSize = rowSlot * (layer.iconScale ?? DEFAULT_ICON_SCALE);
-  const spacing = iconSize * (1 + layer.gap);
+  // 视觉高度基准：图标、字标、符号+文字都以它为准，整墙才是齐的
+  const logoH = rowSlot * (layer.iconScale ?? DEFAULT_ICON_SCALE);
+  const gap = logoH * layer.gap;
+
+  // 单元宽度只依赖 logoH 与已注入的度量 → 纯函数
+  const slots: TickerSlot[] = items.map((item) => ({
+    item,
+    width: slotWidth(item, logoH, state),
+  }));
 
   const defs: string[] = [];
   const body: string[] = [];
@@ -184,13 +250,83 @@ function renderTicker(
       `<clipPath id="${clipId}"><rect x="${f(boxX)}" y="${f(rowTop)}" width="${f(boxW)}" height="${f(rowSlot)}"/></clipPath>`,
     );
     body.push(`<g clip-path="url(#${clipId})">`);
-    for (const p of tickerPositions(items, spacing, boxW, rowPhase, t, rowSpeed, loop)) {
-      const icon = renderIcon(p.item.icon, boxX + p.x, cy, iconSize, state.iconSvgs, fg);
-      if (icon) body.push(icon);
+    for (const p of tickerPositions(slots, gap, boxW, rowPhase, t, rowSpeed, loop)) {
+      const cell = renderLogoSlot(p.item, boxX + p.x, cy, logoH, p.width, state, fg);
+      if (cell) body.push(cell);
     }
     body.push('</g>');
   }
   return [`<g id="${layer.id}">`, `<defs>${defs.join('')}</defs>`, ...body, '</g>'].join('\n');
+}
+
+/**
+ * 单个 logo 单元的占宽。三种形态宽度差异极大（`X` vs `Tailwind CSS`），
+ * 布局必须按实际宽度累积——这是 ticker.ts 从等距改成变宽的原因。
+ */
+function slotWidth(item: TickerItem, logoH: number, state: SceneState): number {
+  const key = item.icon;
+  if (isEmoji(key)) return logoH;
+  const aspect = state.logoAspect?.[key];
+  if (state.logoSvgs?.[key] !== undefined && aspect !== undefined) {
+    return logoH * aspect;
+  }
+  if (!item.label) return logoH;
+  const em = state.labelEm?.[key] ?? item.label.length * 0.58;
+  return logoH + logoH * LABEL_GAP + logoH * LABEL_SCALE * em;
+}
+
+/** 渲染一个 logo 单元：官方字标 → 优先；否则符号（+ 程序排版品牌名） */
+function renderLogoSlot(
+  item: TickerItem,
+  x: number,
+  cy: number,
+  logoH: number,
+  width: number,
+  state: SceneState,
+  fg: string,
+): string {
+  const key = item.icon;
+  if (isEmoji(key)) {
+    return renderIcon(key, x + logoH / 2, cy, logoH, state.iconSvgs, fg);
+  }
+
+  const logoSvg = state.logoSvgs?.[key];
+  if (logoSvg) {
+    return renderWordmark(logoSvg, x, cy - logoH / 2, width, logoH, state.logoMode, fg);
+  }
+
+  const symbol = renderIcon(key, x + logoH / 2, cy, logoH, state.iconSvgs, fg);
+  if (!item.label) return symbol;
+  const fontSize = logoH * LABEL_SCALE;
+  const textX = x + logoH + logoH * LABEL_GAP;
+  // 与标题一致的手算基线，保证导出后跨查看器一致
+  const baseline = cy + fontSize * 0.34;
+  const text = `<text x="${f(textX)}" y="${f(baseline)}" font-family='${DISPLAY_FONT}' font-size="${f(fontSize)}" font-weight="700" fill="${fg}" text-anchor="start">${escapeXml(item.label)}</text>`;
+  return symbol + text;
+}
+
+/** 内联官方字标：剥掉原 <svg> 外壳，按目标尺寸重包一层 */
+function renderWordmark(
+  svg: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  mode: SceneState['logoMode'],
+  fg: string,
+): string {
+  const wrapped = svg.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
+  const inner0 = wrapped?.[1];
+  if (!inner0) return '';
+  const viewBox = svg.match(/viewBox=["']([^"']+)["']/i)?.[1] ?? `0 0 ${width} ${height}`;
+  // brand 模式保留原填充（多数是黑/白双色设计，单色化会把镂空填死、logo 变形）
+  const inner = mode === 'mono' ? forceFill(inner0, fg) : inner0;
+  return `<svg x="${f(x)}" y="${f(y)}" width="${f(width)}" height="${f(height)}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet">${inner}</svg>`;
+}
+
+/** mono 模式：把内部实色填充改成前景色（fill="none" 必须保留，否则镂空消失） */
+function forceFill(inner: string, color: string): string {
+  return inner.replace(/fill=(["'])(?!none)[^"']*\1/gi, `fill="${color}"`);
 }
 
 /**

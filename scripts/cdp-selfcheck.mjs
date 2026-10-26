@@ -49,7 +49,9 @@ const chrome = spawn(
     '--disable-gpu',
     '--disable-dev-shm-usage',
     '--no-proxy-server',
-    '--js-flags=--expose-gc', // 验证页在导出间隙主动 gc()，避免帧垃圾拖垮后续提取
+    // 刻意不加 --js-flags=--expose-gc：本机 Chrome 155 带上它偶发启动即退出
+    // （无任何 stderr），表现为「devtools endpoint unreachable」。验证页对 gc()
+    // 做过 typeof 判断，没有它也能跑，只是帧垃圾回收慢一点。
     `--remote-debugging-port=${PORT}`,
     `--user-data-dir=${USER_DATA_DIR}`,
     'about:blank',

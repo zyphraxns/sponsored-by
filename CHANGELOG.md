@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Complete brand logotypes.** A ticker item can now render as an official full logotype (mark + name, e.g. OpenAI's flower plus wordmark) when one exists, falling back to the symbol plus the brand name set in the site's own type. 153 official wordmarks come from [SVGL](https://svgl.app) (MIT); everything else stays on simple-icons. Variants are picked by background luminance so a dark card gets the light-on-dark mark. Layout moved from fixed-pitch to variable-width slots to make room.
+- **Colour mode.** Logos keep their own colours by default (a `mono` mode that forces the foreground colour remains available in code). Colour presets raise the GIF palette headroom to 64.
+
+### Fixed
+
+- **The icon panel showed no brand icons at all** — the simple-icons metadata JSON changed from an object to an array, the old parser silently produced an empty index, and the fallback endpoint 404s on `@latest`. Both sources are replaced (unpkg package meta for the slug list) and a built-in list of 60 popular brands guarantees the panel is never empty.
+- **Selected brand icons were invisible in the preview** — `scene()` silently skips icons whose SVG has not been pre-fetched, and nothing ever fetched them outside exports. The preview now hydrates the same way exports do.
+- The icon button label leaked Chinese ("图标") on the English UI.
+- Two garbage entries (`UGh`, `糖果`) in the emoji quick-pick row.
+- A single hung CDN request could stall the whole prefetch batch; all logo fetches now time out after 8 s.
 
 ## [0.2.0] - 2026-10-26
 
