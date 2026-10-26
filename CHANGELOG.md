@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.2.0] - 2026-10-26
+
 ### Added
 
 - **Brand icon library.** Ticker items can now be real brand marks from [simple-icons](https://simpleicons.org) instead of emoji: 3000+ single-colour SVGs fetched from the CDN at runtime, forced to one colour so the GIF palette stays small. The export path pre-fetches only the icons a scene actually renders.

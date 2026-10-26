@@ -4,7 +4,7 @@
 Runs entirely in your browser — no server, no upload, no account.</p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Demo: typing a line and getting a card where a fake sponsor scrolls underneath" width="600">
+  <img src="docs/demo.gif" alt="An animated card reading SPONSORED BY, with rows of real brand marks — GitHub, Vercel, Stripe, Figma, OpenAI, Tesla, Nike, Apple, Spotify, Netflix — scrolling underneath" width="600">
 </p>
 
 <p align="center">
