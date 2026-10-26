@@ -16,7 +16,7 @@ Runs entirely in your browser — no server, no upload, no account.</p>
 </p>
 
 > [!WARNING]
-> **Parody — not affiliated with anyone.** No real brand logos, no trademarks, no implied sponsorship. The names you type are yours to choose; the default content is emoji. If you are a brand and want something removed, open an issue and it will be handled.
+> **Parody — not affiliated with anyone.** Nothing here implies sponsorship or endorsement, and no brand has endorsed this project. The default content is emoji. You can also drop in real brand marks sourced from [simple-icons](https://simpleicons.org) — those marks stay the trademarks of their owners, and how you use them is your responsibility. If you are a brand and want something removed, open an issue and it will be handled.
 
 ---
 

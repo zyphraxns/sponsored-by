@@ -6,7 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Brand icon library.** Ticker items can now be real brand marks from [simple-icons](https://simpleicons.org) instead of emoji: 3000+ single-colour SVGs fetched from the CDN at runtime, forced to one colour so the GIF palette stays small. The export path pre-fetches only the icons a scene actually renders.
+- **Icon picker.** A searchable panel for choosing which brand marks appear in the ticker.
+- **Title editing.** The headline is editable in the toolbar and updates the preview live.
+- **Ticker controls.** Row count (1–12), speed (0.5×–2×, quantised to 1/20 steps so the global loop period stays finite), and background / foreground colour pickers.
+
+### Fixed
+
+- Editing the title and then moving any slider no longer resets the headline to the layout default.
+- Dragging a slider no longer freezes the animation at `t = 0`, and no longer rebuilds the colour pickers mid-drag.
+- Colour overrides no longer leak across layouts — a custom light background used to follow you into a dark layout.
+
+### Changed
+
+- `scripts/cdp-selfcheck.mjs` works on Chrome 132+ again: `--headless=old` was removed upstream, and the initial DevTools target now reports `type: "other"` instead of `"page"`.
+
+### Known gaps
+
+- `palette.accent` is declared by every layout but not yet read by the renderer, so the picker exposes only background and foreground. Wiring accent up means recolouring the headline, which would invalidate `docs/demo.gif`.
 
 ## [0.1.0] - 2026-10-25
 
