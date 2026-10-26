@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **Moving any slider dropped every logo** — the async-fetched icon/wordmark assets don't come from the selection state, so rebuilding the scene for ROWS / SPEED / PALETTE silently discarded them, leaving only the typeset names. Rebuilds now carry assets across.
+- **Speed was quadratic, not linear** — the period was already shortened by the speed factor and the scroll offset multiplied by it again (2× behaved as 4×). The offset no longer double-counts.
+- **Loop length was inflated for non-integer periods** — the LCM accumulator started from 1, so `LCM(1, 2.5) = 5` reported a 2.5 s loop as 5 s. Harmless while speeds were integers, wrong the moment 1.6× existed.
+- Wordmark variants are re-picked when the background luminance flips (a dark mark on a dark card used to disappear).
 - **The icon panel showed no brand icons at all** — the simple-icons metadata JSON changed from an object to an array, the old parser silently produced an empty index, and the fallback endpoint 404s on `@latest`. Both sources are replaced (unpkg package meta for the slug list) and a built-in list of 60 popular brands guarantees the panel is never empty.
 - **Selected brand icons were invisible in the preview** — `scene()` silently skips icons whose SVG has not been pre-fetched, and nothing ever fetched them outside exports. The preview now hydrates the same way exports do.
 - The icon button label leaked Chinese ("图标") on the English UI.

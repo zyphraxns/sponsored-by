@@ -245,10 +245,16 @@ function refreshChrome(): void {
  * 所以选了品牌图标却不预取，画布上什么都不会出现——用户会以为功能坏了。
  * 取完写回 state 即可：rAF 循环每帧重渲染，下一帧自动出现。
  */
+/** 上次 hydrate 时背景的明暗——变了就得按新背景重挑字标的 light/dark 变体 */
+let lastDarkBg: boolean | null = null;
+
 async function hydrateIcons(): Promise<void> {
   const { isEmoji, isSimpleIcons, getIconSvg } = await import('./core/simple-icons');
   const need = state.icons.map((i) => i.icon).filter((k) => !isEmoji(k));
   if (need.length === 0) return;
+  const bg = state.palette?.bg ?? state.template.palette.bg;
+  const { isDarkColor } = await import('./core/logos');
+  const darkBg = isDarkColor(bg);
   const have = state.iconSvgs ?? {};
   const missing = need.filter((k) => !(k in have));
   if (missing.length > 0) {
@@ -265,13 +271,35 @@ async function hydrateIcons(): Promise<void> {
     );
     state.iconSvgs = next;
   }
-  // 官方完整字标：有则替代「符号 + 文字」
-  const bg = state.palette?.bg ?? state.template.palette.bg;
+  // 官方完整字标：有则替代「符号 + 文字」。
+  // 背景明暗翻转时（白底 ↔ 深底）必须换变体，否则深字标在深底上直接消失。
+  if (lastDarkBg !== null && lastDarkBg !== darkBg) {
+    state.logoSvgs = {};
+    state.logoAspect = {};
+  }
+  lastDarkBg = darkBg;
   const { svgs, aspect } = await sceneLogoSvgs(state, bg);
   if (Object.keys(svgs).length > 0) {
     state.logoSvgs = { ...(state.logoSvgs ?? {}), ...svgs };
     state.logoAspect = { ...(state.logoAspect ?? {}), ...aspect };
   }
+}
+
+/**
+ * 把异步预取来的资源带过重建。
+ *
+ * iconSvgs / logoSvgs / logoAspect 是渲染前从 CDN 抓的，不来自 sel，
+ * 而 createDefaultState 只会按 sel 重算 state——不带过来就会把 logo 全丢光，
+ * 表现为「拖一下滑块，logo 没了，只剩排版出来的品牌名」。
+ */
+function carryAssets(next: SceneState, prev: SceneState): SceneState {
+  return {
+    ...next,
+    iconSvgs: prev.iconSvgs,
+    logoSvgs: prev.logoSvgs,
+    logoAspect: prev.logoAspect,
+    labelEm: prev.labelEm,
+  };
 }
 
 /**
@@ -283,18 +311,22 @@ async function hydrateIcons(): Promise<void> {
  *   拖动过程中把正在操作的 <input> 销毁掉。
  */
 function rebuildLive(partial: Partial<Selection>): void {
+  const prev = state;
   sel = { ...sel, ...partial };
-  state = createDefaultState(sel);
+  state = carryAssets(createDefaultState(sel), prev);
   loopSeconds = loopSecondsFor(state);
   if (reducedMotion) renderAt(0);
   refreshMeta();
+  // 背景色一变，字标的 light/dark 变体就得重新挑（深字标在深底上会消失）
+  if (partial.palette) void hydrateIcons();
 }
 
 /** 切换版式 / 语言 / 比例时重建 state。用户内容（icons/text/palette）透传，
  *  避免换版式时把已选图标和文案清空——切换的是版式，不是用户的作品。 */
 function apply(partial: Partial<Selection>): void {
+  const prev = state;
   sel = { ...sel, ...partial };
-  state = createDefaultState(sel);
+  state = carryAssets(createDefaultState(sel), prev);
   loopSeconds = loopSecondsFor(state);
   start = performance.now(); // 切换后从 t=0 起播，动作干净
   if (reducedMotion) renderAt(0);

@@ -243,7 +243,10 @@ function renderTicker(
     const cy = rowTop + rowSlot / 2;
     const dir = i % 2 === 0 ? 1 : -1; // 隔行反向（经典跑马灯观感；周期不受方向影响）
     const rowPhase = (((i * layer.phaseJitter) % 1) + 1) % 1; // 行间错相
-    const rowSpeed = dir * (state.speed || 1);
+    // 速度倍率**只**体现在 loopSeconds（BASE/speed，见 loopSecondsFor）：
+    // 周期变短 → 同样时间内走完一个周期 → 线性变快。
+    // 这里不能再乘一次 speed，否则速度变成平方关系（调到 2× 实际是 4 倍速）。
+    const rowSpeed = dir;
     const clipId = `clip-${layer.id}-${i}`;
 
     defs.push(

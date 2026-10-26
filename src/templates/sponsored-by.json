@@ -4,7 +4,7 @@
   "name": { "en": "Sponsored by", "zh": "由以下品牌赞助" },
   "canvas": { "ratios": ["1:1", "4:5", "16:9"], "basePx": 1080 },
   "constraints": { "maxColors": 8, "allowGradient": false, "allowAlpha": false },
-  "palette": { "bg": "#0a0a0a", "fg": "#ffffff", "accent": "#ffd400" },
+  "palette": { "bg": "#f5f3ee", "fg": "#111111", "accent": "#b45309" },
   "layers": [
     {
       "type": "text",
@@ -45,12 +45,12 @@
     },
     {
       "id": "inverted",
-      "name": { "en": "Inverted (light card)", "zh": "反色（浅色卡）" },
+      "name": { "en": "Inverted (dark card)", "zh": "反色（深色卡）" },
       "patch": [
         {
           "op": "replace",
           "path": "/palette",
-          "value": { "bg": "#f5f3ee", "fg": "#111111", "accent": "#b45309" }
+          "value": { "bg": "#0a0a0a", "fg": "#ffffff", "accent": "#ffd400" }
         }
       ]
     }

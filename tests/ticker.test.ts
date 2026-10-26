@@ -100,4 +100,13 @@ describe('loopDuration', () => {
   it('小数周期按分数 LCM（±0.25 速度抖动场景）', () => {
     expect(loopDuration([0.8, 1.25])).toBe(20);
   });
+  it('非整数周期不再被虚报成 2 倍（回归：起点不能用 1）', () => {
+    // 速度 1.6× → 周期 2.5s；旧实现 LCM(1, 2.5) = 5，多算一倍
+    expect(loopDuration([2.5])).toBe(2.5);
+    expect(loopDuration([2.5, 2.5, 2.5])).toBe(2.5);
+    expect(loopDuration([2.5, 4])).toBe(20); // LCM(5/2, 4) = 20
+  });
+  it('空列表返回 1（不除零）', () => {
+    expect(loopDuration([])).toBe(1);
+  });
 });

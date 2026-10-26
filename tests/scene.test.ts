@@ -18,7 +18,7 @@ function makeState(overrides: Partial<SceneState> = {}): SceneState {
   };
 }
 
-describe('scene(state, 0) — M0 判据：黑底白字大标题 + 三行 emoji 排布', () => {
+describe('scene(state, 0) — M0 判据：浅底深字大标题 + 三行 emoji 排布', () => {
   const svg = scene(makeState(), 0);
 
   it('合法 SVG 骨架 1080×1080', () => {
@@ -27,14 +27,14 @@ describe('scene(state, 0) — M0 判据：黑底白字大标题 + 三行 emoji �
     expect(svg.endsWith('</svg>')).toBe(true);
   });
 
-  it('黑底', () => {
-    expect(svg).toContain('<rect x="0" y="0" width="1080" height="1080" fill="#0a0a0a"/>');
+  it('浅底（默认版式改为白底，真实赞助商墙的样子）', () => {
+    expect(svg).toContain('<rect x="0" y="0" width="1080" height="1080" fill="#f5f3ee"/>');
   });
 
-  it('白字粗体大标题', () => {
+  it('深字粗体大标题', () => {
     expect(svg).toContain('>SPONSORED BY</text>');
     expect(svg).toContain('font-weight="800"');
-    expect(svg).toContain('fill="#ffffff"');
+    expect(svg).toContain('fill="#111111"');
   });
 
   it('三行 emoji 排布（含跨边界重复项，总数不少于 9）', () => {
@@ -143,7 +143,7 @@ describe('simple-icons 渲染（iconSvgs 接入）', () => {
       0,
     );
     expect(out).toContain('<path d="M12 2L2 7l10 5 10-5-10-5z"');
-    expect(out).toContain('fill="#ffffff"'); // 强制单色
+    expect(out).toContain('fill="#111111"'); // 强制单色
     expect(out).not.toContain('font-family=\'Apple Color Emoji\''); // 不走 emoji 路径
   });
 

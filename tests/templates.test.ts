@@ -55,12 +55,12 @@ describe('变体机制', () => {
     expect(patched.palette).toEqual(sponsoredBy.palette);
   });
 
-  it('inverted 变体换色板（证明补丁不限文案）', () => {
+  it('inverted 变体换色板（证明补丁不限文案）——默认浅底，反色为深底', () => {
     const patched = resolveTemplate('sponsored-by', 'inverted');
-    expect(patched.palette.bg).toBe('#f5f3ee');
-    expect(patched.palette.fg).toBe('#111111');
-    // 原模板不被污染
-    expect(sponsoredBy.palette.bg).toBe('#0a0a0a');
+    expect(patched.palette.bg).toBe('#0a0a0a');
+    expect(patched.palette.fg).toBe('#ffffff');
+    // 原模板不被污染（默认版式是浅底：真实赞助商墙的样子）
+    expect(sponsoredBy.palette.bg).toBe('#f5f3ee');
   });
 
   it('未知变体 id 报错并列出可用项', () => {
@@ -181,7 +181,7 @@ describe('scene × 全部版式 × 双语', () => {
   it('不同模板渲染不同背景（换 JSON 即换视觉）', () => {
     const hero = scene(createDefaultState(), 0);
     const gang = scene(createDefaultState({ templateId: 'made-by-gang' }), 0);
-    expect(hero).toContain('fill="#0a0a0a"');
+    expect(hero).toContain('fill="#f5f3ee"');
     expect(gang).toContain('fill="#e9dfc9"');
   });
 });

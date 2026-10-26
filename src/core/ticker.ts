@@ -110,14 +110,22 @@ function gcd(a: number, b: number): number {
  * speedJitter 时的硬约束，届时各行速度会量化到有限分数集合。
  */
 export function loopDuration(periods: number[]): number {
-  let num = 1;
+  // 起点必须取**第一个周期**，不能用 1——LCM 没有「1 是中性元」这回事：
+  // LCM(1, 2.5) = 5，会把 2.5s 的周期虚报成 5s。整数周期时碰巧无害
+  // （4 是 1 的倍数），速度一调到 1.6×（周期 2.5s）就暴露。
+  let num: number | null = null;
   let den = 1;
   for (const p of periods) {
     if (p <= 0) continue;
     const [pn, pd] = toFraction(p);
+    if (num === null) {
+      num = pn;
+      den = pd;
+      continue;
+    }
     const g1 = gcd(num, pn);
     num = (num / g1) * pn;
     den = gcd(den, pd);
   }
-  return num / den;
+  return num === null ? 1 : num / den;
 }
