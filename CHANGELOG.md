@@ -40,6 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **Layout menu reworked.** The `Inverted` variant is gone — the palette control covers it, and one-click colour switching inside a layout selector was redundant. New copy variants built on the same JSON-patch architecture: **Powered by** on every layout (including `Powered by nothing` on No sponsors, closing the joke), and **Presented by** on Sponsored by. The menu is now nine items where every entry changes something visible.
+
 - `scripts/cdp-selfcheck.mjs` works on Chrome 132+ again: `--headless=old` was removed upstream, and the initial DevTools target now reports `type: "other"` instead of `"page"`.
 
 ### Known gaps

@@ -44,13 +44,24 @@
       ]
     },
     {
-      "id": "inverted",
-      "name": { "en": "Inverted (dark card)", "zh": "反色（深色卡）" },
+      "id": "presented-by",
+      "name": { "en": "Presented by", "zh": "由以下品牌呈现" },
       "patch": [
         {
           "op": "replace",
-          "path": "/palette",
-          "value": { "bg": "#0a0a0a", "fg": "#ffffff", "accent": "#ffd400" }
+          "path": "/layers/0/default",
+          "value": { "en": "PRESENTED BY", "zh": "由以下品牌呈现" }
+        }
+      ]
+    },
+    {
+      "id": "powered-by",
+      "name": { "en": "Powered by", "zh": "由以下品牌强力驱动" },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/layers/0/default",
+          "value": { "en": "POWERED BY", "zh": "由以下品牌强力驱动" }
         }
       ]
     }

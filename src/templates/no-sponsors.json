@@ -1,49 +1,128 @@
 {
   "id": "no-sponsors",
   "version": 1,
-  "name": { "en": "No sponsors", "zh": "无人赞助" },
-  "canvas": { "ratios": ["1:1", "4:5", "16:9"], "basePx": 1080 },
-  "constraints": { "maxColors": 8, "allowGradient": false, "allowAlpha": false },
-  "palette": { "bg": "#1c1917", "fg": "#fafaf9", "accent": "#dc2626" },
+  "name": {
+    "en": "No sponsors",
+    "zh": "无人赞助"
+  },
+  "canvas": {
+    "ratios": [
+      "1:1",
+      "4:5",
+      "16:9"
+    ],
+    "basePx": 1080
+  },
+  "constraints": {
+    "maxColors": 8,
+    "allowGradient": false,
+    "allowAlpha": false
+  },
+  "palette": {
+    "bg": "#1c1917",
+    "fg": "#fafaf9",
+    "accent": "#dc2626"
+  },
   "layers": [
     {
       "type": "text",
       "id": "title",
-      "default": { "en": "NO SPONSORS", "zh": "无人赞助" },
+      "default": {
+        "en": "NO SPONSORS",
+        "zh": "无人赞助"
+      },
       "font": "display",
       "fit": "auto-shrink",
-      "box": [0.08, 0.1, 0.84, 0.22],
+      "box": [
+        0.08,
+        0.1,
+        0.84,
+        0.22
+      ],
       "align": "center"
     },
     {
       "type": "ticker",
       "id": "rows",
       "rows": 3,
-      "box": [0, 0.38, 1, 0.52],
+      "box": [
+        0,
+        0.38,
+        1,
+        0.52
+      ],
       "iconScale": 0.62,
       "gap": 0.6,
       "phaseJitter": 0.5,
       "speedJitter": 0.24,
       "items": [
-        { "icon": "emoji:🫥", "phase": 0, "speed": 1 },
-        { "icon": "emoji:😎", "phase": 0.33, "speed": 1 },
-        { "icon": "emoji:🍀", "phase": 0.66, "speed": 1 }
+        {
+          "icon": "emoji:🫥",
+          "phase": 0,
+          "speed": 1
+        },
+        {
+          "icon": "emoji:😎",
+          "phase": 0.33,
+          "speed": 1
+        },
+        {
+          "icon": "emoji:🍀",
+          "phase": 0.66,
+          "speed": 1
+        }
       ]
     }
   ],
   "variants": [
     {
       "id": "still-no-sponsors",
-      "name": { "en": "Still no sponsors", "zh": "依然无人赞助" },
+      "name": {
+        "en": "Still no sponsors",
+        "zh": "依然无人赞助"
+      },
       "patch": [
         {
           "op": "replace",
           "path": "/layers/0/default",
-          "value": { "en": "STILL NO SPONSORS", "zh": "依然无人赞助" }
+          "value": {
+            "en": "STILL NO SPONSORS",
+            "zh": "依然无人赞助"
+          }
+        }
+      ]
+    },
+    {
+      "id": "powered-by-nothing",
+      "name": {
+        "en": "Powered by nothing",
+        "zh": "由虚空强力驱动"
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/layers/0/default",
+          "value": {
+            "en": "POWERED BY NOTHING",
+            "zh": "由虚空强力驱动"
+          }
         }
       ]
     }
   ],
-  "animation": { "loopSeconds": "auto", "fps": 16, "loop": true },
-  "export": { "formats": ["gif", "png", "svg", "mp4"], "gifMaxColors": 32, "dither": "atkinson" }
+  "animation": {
+    "loopSeconds": "auto",
+    "fps": 16,
+    "loop": true
+  },
+  "export": {
+    "formats": [
+      "gif",
+      "png",
+      "svg",
+      "mp4"
+    ],
+    "gifMaxColors": 32,
+    "dither": "atkinson"
+  }
 }

@@ -55,12 +55,26 @@ describe('变体机制', () => {
     expect(patched.palette).toEqual(sponsoredBy.palette);
   });
 
-  it('inverted 变体换色板（证明补丁不限文案）——默认浅底，反色为深底', () => {
-    const patched = resolveTemplate('sponsored-by', 'inverted');
-    expect(patched.palette.bg).toBe('#0a0a0a');
-    expect(patched.palette.fg).toBe('#ffffff');
+  it('powered-by 变体只换标题文案（补丁不改配色——配色归色板控件管）', () => {
+    const patched = resolveTemplate('sponsored-by', 'powered-by');
+    const layer = patched.layers[0];
+    if (layer?.type !== 'text') throw new Error('expected a text layer');
+    expect(layer.default.en).toBe('POWERED BY');
+    expect(patched.palette).toEqual(sponsoredBy.palette);
     // 原模板不被污染（默认版式是浅底：真实赞助商墙的样子）
     expect(sponsoredBy.palette.bg).toBe('#f5f3ee');
+  });
+
+  it('inverted 变体已删除：配色由色板控件接管，不再占用下拉位', () => {
+    const sb = resolveTemplate('sponsored-by');
+    expect((sb.variants ?? []).some((v) => v.id === 'inverted')).toBe(false);
+  });
+
+  it('no-sponsors 的 powered-by-nothing 变体（反讽梗闭环）', () => {
+    const patched = resolveTemplate('no-sponsors', 'powered-by-nothing');
+    const layer = patched.layers[0];
+    if (layer?.type !== 'text') throw new Error('expected a text layer');
+    expect(layer.default.en).toBe('POWERED BY NOTHING');
   });
 
   it('未知变体 id 报错并列出可用项', () => {
