@@ -254,6 +254,10 @@ export async function searchBrands(query: string): Promise<BrandHit[]> {
     .filter((h) => {
       const id = h.key.split(':')[1] ?? '';
       if (id.includes(q) || h.label.toLowerCase().includes(q)) return true;
+      // nq 必须非空：中文等非拉丁搜索词规范化后是空串，而
+      // "任意字符串".includes("") 恒为 true —— 不判空会把全部品牌当成命中，
+      // 表现为「搜中文出来一堆不相关的品牌」。
+      if (!nq) return false;
       return h.label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(nq);
     })
     .slice(0, 60);

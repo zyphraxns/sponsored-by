@@ -53,6 +53,10 @@ export interface UiStrings {
   iconPanelClear: string;
   /** 上传 logo 按钮 */
   uploadBtn: string;
+  /** 搜索无结果提示 */
+  iconNoResult: string;
+  /** 上传项的文字标签占位提示 */
+  uploadLabelPlaceholder: string;
   /** 图标面板关闭按钮 */
   iconPanelClose: string;
   /** 图标面板底部提示 */
@@ -90,6 +94,8 @@ export const UI: Record<Locale, UiStrings> = {
     iconPanelLoading: 'Loading…',
     iconPanelClear: 'Clear',
     uploadBtn: 'Upload',
+    uploadLabelPlaceholder: 'Text next to it (optional)',
+    iconNoResult: 'No brand matches. Brand names are in English — try "apple", "nike", "openai".',
     iconPanelClose: 'Close',
     iconPanelHint: 'Click to toggle. simple-icons 3000+ brand marks, single-color SVG.',
     exportGif: 'Export GIF',
@@ -128,6 +134,8 @@ export const UI: Record<Locale, UiStrings> = {
     iconPanelLoading: '加载中…',
     iconPanelClear: '清空',
     uploadBtn: '上传',
+    uploadLabelPlaceholder: '图旁边的文字（可选）',
+    iconNoResult: '没有匹配的品牌。品牌名是英文的，试试「apple」「nike」「openai」。',
     iconPanelClose: '关闭',
     iconPanelHint: '点击切换选中状态。simple-icons 3000+ 品牌矢量，单色 SVG。',
     exportGif: '导出 GIF',

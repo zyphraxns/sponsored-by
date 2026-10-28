@@ -228,6 +228,12 @@
         transition: border-color 120ms ease, background 120ms ease;
       }
       .icon-cell:hover { background: #fff; }
+      /* 上传格子：虚线框区别于已有图标，视觉上就是「在这里添加」 */
+      .icon-cell.is-upload {
+        border-style: dashed;
+        color: var(--ink-quiet);
+      }
+      .icon-cell.is-upload:hover { color: var(--ink); border-color: var(--ink); }
       .icon-cell svg { width: 32px; height: 32px; }
       .icon-cell[aria-pressed="true"] { border-color: var(--ink); background: #fff; }
       .icon-cell .emoji { font-size: 28px; line-height: 1; }
@@ -240,6 +246,54 @@
         border-top: 1px solid var(--hairline);
       }
       .icon-panel__actions { display: flex; gap: 8px; }
+      /* 已上传的 logo：缩略图 + 可编辑的文字标签 + 移除 */
+      .icon-uploads {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--hairline);
+        background: var(--surface-raised);
+      }
+      .icon-upload-row { display: flex; align-items: center; gap: 10px; }
+      .icon-upload-row .thumb {
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--hairline);
+        border-radius: 6px;
+        background: #fff;
+        overflow: hidden;
+      }
+      .icon-upload-row .thumb img,
+      .icon-upload-row .thumb svg { width: 26px; height: 26px; object-fit: contain; }
+      .icon-upload-row .thumb svg path { fill: var(--ink); }
+      .icon-upload-row input[type="text"] {
+        flex: 1 1 auto;
+        min-width: 0;
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        border: 1px solid var(--hairline);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+      }
+      .icon-upload-row .kill {
+        flex: 0 0 auto;
+        border: none;
+        background: transparent;
+        color: var(--ink-quiet);
+        font: inherit;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 6px;
+      }
+      .icon-upload-row .kill:hover { color: var(--ink); }
       .icon-panel__hint { font-size: 11px; color: var(--ink-quiet); }
       .icon-cell svg path { fill: var(--ink); }
       .title-input {
@@ -351,6 +405,7 @@
           <button class="btn" type="button" id="icon-close">关闭</button>
         </div>
         <input class="icon-search" id="icon-search" type="search" placeholder="搜索品牌…" autocomplete="off" />
+        <div class="icon-uploads" id="icon-uploads" hidden></div>
         <div class="icon-grid" id="icon-grid" role="listbox"></div>
         <div class="icon-panel__footer">
           <span class="icon-panel__hint" id="icon-hint"></span>

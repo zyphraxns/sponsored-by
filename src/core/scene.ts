@@ -282,21 +282,37 @@ function renderTicker(
  * 单个 logo 单元的占宽。三种形态宽度差异极大（`X` vs `Tailwind CSS`），
  * 布局必须按实际宽度累积——这是 ticker.ts 从等距改成变宽的原因。
  */
+/** 单元里「品牌名」占的额外宽度（含图标与文字之间的间距） */
+function labelWidth(item: TickerItem, logoH: number, state: SceneState): number {
+  if (!item.label) return 0;
+  const em = state.labelEm?.[item.icon] ?? item.label.length * 0.58;
+  return logoH * LABEL_GAP + logoH * LABEL_SCALE * em;
+}
+
+/** 品牌名文字（与标题同一套字体与手算基线，保证导出跨查看器一致） */
+function renderLabel(label: string, startX: number, cy: number, logoH: number, fg: string): string {
+  const fontSize = logoH * LABEL_SCALE;
+  const textX = startX + logoH * LABEL_GAP;
+  const baseline = cy + fontSize * 0.34;
+  return `<text x="${f(textX)}" y="${f(baseline)}" font-family='${DISPLAY_FONT}' font-size="${f(fontSize)}" font-weight="700" fill="${fg}" text-anchor="start">${escapeXml(label)}</text>`;
+}
+
 function slotWidth(item: TickerItem, logoH: number, state: SceneState): number {
   const key = item.icon;
   if (isEmoji(key)) return logoH;
-  // 用户上传：位图按原始宽高比给宽度（上限 4，防极端长图挤爆一行）
+  // 用户上传：位图按原始宽高比给宽度（上限 4，防极端长图挤爆一行），
+  // 若配了自定义文字还要再加上文字宽度
   if (isUpload(key)) {
     const a = state.logoAspect?.[key];
-    return a ? logoH * Math.min(a, 4) : logoH;
+    const logoW = a ? logoH * Math.min(a, 4) : logoH;
+    return logoW + labelWidth(item, logoH, state);
   }
   const aspect = state.logoAspect?.[key];
   if (state.logoSvgs?.[key] !== undefined && aspect !== undefined) {
     return logoH * aspect;
   }
   if (!item.label) return logoH;
-  const em = state.labelEm?.[key] ?? item.label.length * 0.58;
-  return logoH + logoH * LABEL_GAP + logoH * LABEL_SCALE * em;
+  return logoH + labelWidth(item, logoH, state);
 }
 
 /** 渲染一个 logo 单元：官方字标 → 优先；否则符号（+ 程序排版品牌名） */
@@ -315,14 +331,16 @@ function renderLogoSlot(
   }
 
   // 用户上传：内容已在 iconSvgs（SVG 文本或位图 dataURL）。
-  // 位图用 <image> + meet 保比例铺满整个槽；SVG 文本按 viewBox fit。
+  // 位图用 <image> + meet 保比例铺满 logo 区；SVG 文本按 viewBox fit。
+  // 之后可以跟自定义文字（用户给上传的图配名字）。
   if (isUpload(key)) {
     const content = state.iconSvgs?.[key] ?? '';
     if (!content) return '';
-    if (content.startsWith('data:')) {
-      return `<image href="${escapeXml(content)}" x="${f(x)}" y="${f(cy - logoH / 2)}" width="${f(width)}" height="${f(logoH)}" preserveAspectRatio="xMidYMid meet"/>`;
-    }
-    return renderFittedSvg(content, x + width / 2, cy, Math.min(logoH, width), fg, false);
+    const logoW = width - labelWidth(item, logoH, state);
+    const logo = content.startsWith('data:')
+      ? `<image href="${escapeXml(content)}" x="${f(x)}" y="${f(cy - logoH / 2)}" width="${f(logoW)}" height="${f(logoH)}" preserveAspectRatio="xMidYMid meet"/>`
+      : renderFittedSvg(content, x + logoW / 2, cy, Math.min(logoH, logoW), fg, false);
+    return logo + (item.label ? renderLabel(item.label, x + logoW, cy, logoH, fg) : '');
   }
 
   const logoSvg = state.logoSvgs?.[key];
@@ -332,12 +350,7 @@ function renderLogoSlot(
 
   const symbol = renderIcon(key, x + logoH / 2, cy, logoH, state.iconSvgs, fg);
   if (!item.label) return symbol;
-  const fontSize = logoH * LABEL_SCALE;
-  const textX = x + logoH + logoH * LABEL_GAP;
-  // 与标题一致的手算基线，保证导出后跨查看器一致
-  const baseline = cy + fontSize * 0.34;
-  const text = `<text x="${f(textX)}" y="${f(baseline)}" font-family='${DISPLAY_FONT}' font-size="${f(fontSize)}" font-weight="700" fill="${fg}" text-anchor="start">${escapeXml(item.label)}</text>`;
-  return symbol + text;
+  return symbol + renderLabel(item.label, x + logoH, cy, logoH, fg);
 }
 
 /** 内联官方字标：剥掉原 <svg> 外壳，按目标尺寸重包一层 */

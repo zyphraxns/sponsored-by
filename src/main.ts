@@ -365,6 +365,7 @@ const iconSearch = document.getElementById('icon-search') as HTMLInputElement | 
 const iconGrid = document.getElementById('icon-grid') as HTMLElement | null;
 const iconHint = document.getElementById('icon-hint') as HTMLElement | null;
 const iconClear = document.getElementById('icon-clear') as HTMLButtonElement | null;
+const iconUploads = document.getElementById('icon-uploads') as HTMLElement | null;
 const titleInput = document.getElementById('title-input') as HTMLInputElement | null;
 
 let iconSearchQuery = '';
@@ -386,19 +387,42 @@ async function loadIconIndex(): Promise<string[]> {
   return [];
 }
 
+/**
+ * 预览用的并发池：一次最多 8 个 SVG 请求。
+ * 搜索会一次铺满 60 个格子，全并发会被 CDN 限流打回，表现为大片空白格子。
+ */
+const PREVIEW_PARALLEL = 8;
+let previewActive = 0;
+const previewWaiting: Array<() => void> = [];
+
+async function withPreviewSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (previewActive >= PREVIEW_PARALLEL) {
+    await new Promise<void>((resolve) => previewWaiting.push(resolve));
+  }
+  previewActive++;
+  try {
+    return await fn();
+  } finally {
+    previewActive--;
+    previewWaiting.shift()?.();
+  }
+}
+
 /** 面板预览用的符号 SVG：simple-icons 走自己的 CDN；svgl: 走 SVGL（浅色 UI 用 light 变体） */
 async function brandPreviewSvg(hit: BrandHit): Promise<string | undefined> {
   const { getIconSvg } = await import('./core/simple-icons');
-  if (hit.key.startsWith('simple-icons:')) {
-    return getIconSvg(hit.key.slice('simple-icons:'.length)).catch(() => undefined);
-  }
-  if (hit.key.startsWith('svgl:')) {
-    const { loadSvglAssets, getLogoAsset, pickVariant, fetchLogo } = await import('./core/logos');
-    await loadSvglAssets();
-    const url = pickVariant(getLogoAsset(hit.label)?.symbol, false);
-    return url ? fetchLogo(url).catch(() => undefined) : undefined;
-  }
-  return undefined;
+  return withPreviewSlot(async () => {
+    if (hit.key.startsWith('simple-icons:')) {
+      return getIconSvg(hit.key.slice('simple-icons:'.length)).catch(() => undefined);
+    }
+    if (hit.key.startsWith('svgl:')) {
+      const { loadSvglAssets, getLogoAsset, pickVariant, fetchLogo } = await import('./core/logos');
+      await loadSvglAssets();
+      const url = pickVariant(getLogoAsset(hit.label)?.symbol, false);
+      return url ? fetchLogo(url).catch(() => undefined) : undefined;
+    }
+    return undefined;
+  });
 }
 
 async function renderIconGrid(): Promise<void> {
@@ -406,6 +430,7 @@ async function renderIconGrid(): Promise<void> {
   const t = ui(state.locale);
   iconGrid.replaceChildren();
   if (iconHint) iconHint.textContent = t.iconPanelHint;
+  renderUploads();
   iconGrid.textContent = t.iconPanelLoading;
 
   const { searchBrands, EMOJI_PRESETS } = await import('./core/simple-icons');
@@ -413,11 +438,26 @@ async function renderIconGrid(): Promise<void> {
 
   // emoji 快捷面板 + 品牌结果，共用同一网格。
   // 搜索时不再显示 emoji——用户在找品牌，emoji 只是噪音。
-  const cells: Array<{ key: string; label: string; svg?: Promise<string | undefined>; emoji?: string }> = [];
+  // 上传格子放在最前面：用户找「上传图标」会先看图标列表，而不是面板角落。
+  // 只在非搜索态显示（搜索时用户明确在找已有品牌）。
+  const cells: Array<{
+    key: string;
+    label: string;
+    svg?: Promise<string | undefined>;
+    emoji?: string;
+    upload?: boolean;
+  }> = [];
   if (!iconSearchQuery) {
+    cells.push({ key: '__upload__', label: t.uploadBtn, upload: true });
     for (const e of EMOJI_PRESETS) cells.push({ key: `emoji:${e}`, label: '', emoji: e });
   }
   for (const h of hits) cells.push({ key: h.key, label: h.label, svg: brandPreviewSvg(h) });
+
+  if (cells.length === 0) {
+    // 空结果给出方向：品牌名是英文的，搜中文必然空
+    iconGrid.textContent = t.iconNoResult;
+    return;
+  }
 
   iconGrid.replaceChildren();
   for (const cell of cells) {
@@ -425,6 +465,30 @@ async function renderIconGrid(): Promise<void> {
     btn.type = 'button';
     btn.className = 'icon-cell';
     btn.setAttribute('role', 'option');
+
+    // 上传格子：不参与选中状态，点它直接开文件选择
+    if (cell.upload) {
+      btn.classList.add('is-upload');
+      btn.removeAttribute('role');
+      const plus = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      plus.setAttribute('viewBox', '0 0 24 24');
+      plus.setAttribute('fill', 'none');
+      plus.setAttribute('stroke', 'currentColor');
+      plus.setAttribute('stroke-width', '1.8');
+      plus.setAttribute('stroke-linecap', 'round');
+      plus.innerHTML = '<path d="M12 5v14M5 12h14"/>';
+      const visual = document.createElement('span');
+      visual.className = 'icon-visual';
+      visual.appendChild(plus);
+      btn.appendChild(visual);
+      const label = document.createElement('span');
+      label.textContent = cell.label;
+      btn.appendChild(label);
+      btn.addEventListener('click', () => document.getElementById('icon-upload')?.click());
+      iconGrid.appendChild(btn);
+      continue;
+    }
+
     const selected = sel.icons.some((i) => i.icon === cell.key);
     btn.setAttribute('aria-pressed', String(selected));
 
@@ -442,6 +506,11 @@ async function renderIconGrid(): Promise<void> {
         .then((text) => {
           if (!text) return;
           const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+          // 视口必须用 SVG 自己的 viewBox：simple-icons 是 24×24，但 SVGL 的符号
+          // 视口各异（如 256×222）。写死 24×24 会让后者只显示左上角一小块，
+          // 看起来就是一个黑方块。
+          const vb = doc.documentElement.getAttribute('viewBox');
+          if (vb) svg.setAttribute('viewBox', vb);
           // 整段内联而不是只取第一个 path：SVGL 的符号是多 path + clipPath 的组合，
           // 只取第一个会把 logo 缺一半。上色交给 CSS（.icon-cell svg path）。
           svg.innerHTML = doc.documentElement.innerHTML;
@@ -469,6 +538,66 @@ async function renderIconGrid(): Promise<void> {
       renderIconGrid();
     });
     iconGrid.appendChild(btn);
+  }
+}
+
+/**
+ * 「已上传」列表：缩略图 + 可编辑的文字标签 + 移除。
+ *
+ * 文字只改 sel.icons 里同一个对象（state.icons 与它共享引用），下一帧 rAF
+ * 就会按新 label 重排——不调 apply()，否则会重建面板把正在输入的框销毁。
+ */
+function renderUploads(): void {
+  if (!iconUploads) return;
+  const t = ui(state.locale);
+  const ups = sel.icons.filter((i) => i.icon.startsWith('upload:'));
+  iconUploads.replaceChildren();
+  iconUploads.hidden = ups.length === 0;
+
+  for (const item of ups) {
+    const row = document.createElement('div');
+    row.className = 'icon-upload-row';
+
+    const thumb = document.createElement('span');
+    thumb.className = 'thumb';
+    const content = state.iconSvgs?.[item.icon];
+    if (content?.startsWith('data:')) {
+      const img = document.createElement('img');
+      img.src = content;
+      img.alt = '';
+      thumb.appendChild(img);
+    } else if (content) {
+      const doc = new DOMParser().parseFromString(content, 'image/svg+xml');
+      const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      const vb = doc.documentElement.getAttribute('viewBox');
+      s.setAttribute('viewBox', vb ?? '0 0 24 24');
+      s.innerHTML = doc.documentElement.innerHTML;
+      thumb.appendChild(s);
+    }
+    row.appendChild(thumb);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = item.label ?? '';
+    input.placeholder = t.uploadLabelPlaceholder;
+    input.addEventListener('input', () => {
+      item.label = input.value.trim() || undefined;
+    });
+    row.appendChild(input);
+
+    const kill = document.createElement('button');
+    kill.type = 'button';
+    kill.className = 'kill';
+    kill.textContent = '×';
+    kill.title = t.iconPanelClear;
+    kill.addEventListener('click', () => {
+      sel.icons = sel.icons.filter((i) => i.icon !== item.icon);
+      apply({ icons: sel.icons });
+      renderIconGrid();
+    });
+    row.appendChild(kill);
+
+    iconUploads.appendChild(row);
   }
 }
 
@@ -526,7 +655,8 @@ uploadInput?.addEventListener('change', () => {
           });
           if (aspect) state.logoAspect = { ...(state.logoAspect ?? {}), [key]: aspect };
         }
-        sel.icons.push({ icon: key });
+        // 默认用文件名（去扩展名）当文字标签，用户可在「已上传」列表里改
+        sel.icons.push({ icon: key, label: file.name.replace(/\.[^.]+$/, '') || undefined });
       } catch {
         /* 单个文件失败跳过，不中断批量 */
       }

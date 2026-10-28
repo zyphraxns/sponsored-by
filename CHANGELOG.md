@@ -6,8 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **Icon previews were clipped or blank.** Every tile forced its SVG into a `0 0 24 24` viewport (simple-icons' convention), so marks with a different viewBox — most of the SVGL ones — rendered as a black square. The tile now adopts each SVG's own viewBox.
+- **Blank tiles when a search returned many results.** All previews were fetched at once and the CDN throttled the burst, leaving silent gaps. Previews now go through a pool of 8 concurrent requests.
+- **Searching in Chinese returned every brand.** The normalised term collapsed to an empty string for non-Latin input, and `String.includes('')` is always true, so everything matched. Empty-normalised queries now return nothing, with a hint that brand names are in English.
+
 ### Added
 
+- **Text next to your own logo.** Uploaded logos get a text label (defaults to the file name) that you can edit in the uploads list at the top of the panel; it renders beside the mark and drives the slot width.
+- **Upload tile in the grid.** The upload action is now the first tile in the icon grid, not just a button in the panel corner.
 - **Upload your own logo.** The icon panel now has an upload button: SVG files are inlined and fitted by their own viewBox, bitmaps (PNG/JPEG/WebP) go in as data URLs rendered with `preserveAspectRatio`, and the original aspect ratio drives the slot width. Uploaded artwork keeps its own colours — it is never force-tinted.
 - **SVGL-only brands are now searchable.** The brand index is the union of simple-icons and SVGL, so marks that were removed from simple-icons (OpenAI among them) are selectable again under the `svgl:` source; their symbol and wordmark both come from SVGL. Searches hit both sources.
 - **Complete brand logotypes.** A ticker item can now render as an official full logotype (mark + name, e.g. OpenAI's flower plus wordmark) when one exists, falling back to the symbol plus the brand name set in the site's own type. 153 official wordmarks come from [SVGL](https://svgl.app) (MIT); everything else stays on simple-icons. Variants are picked by background luminance so a dark card gets the light-on-dark mark. Layout moved from fixed-pitch to variable-width slots to make room.
