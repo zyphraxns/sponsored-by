@@ -6,10 +6,10 @@
   "description": "Parody meme generator: render a looping \"SPONSORED BY\" card in the browser and export it as GIF, MP4, PNG or SVG.",
   "license": "MIT",
   "author": "zyphraxns",
-  "homepage": "https://zyphraxns.github.io/sponsored-by/",
+  "homepage": "https://zyphraxns.github.io/sponsored-by-meme-generator/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zyphraxns/sponsored-by.git"
+    "url": "git+https://github.com/zyphraxns/sponsored-by-meme-generator.git"
   },
   "keywords": [
     "meme-generator",

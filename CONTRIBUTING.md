@@ -15,8 +15,8 @@ If you need something to look different in one export, add a parameter to the te
 ## Setup
 
 ```bash
-git clone https://github.com/zyphraxns/sponsored-by.git
-cd sponsored-by
+git clone https://github.com/zyphraxns/sponsored-by-meme-generator.git
+cd sponsored-by-meme-generator
 npm install
 npm run dev            # http://localhost:5173
 ```

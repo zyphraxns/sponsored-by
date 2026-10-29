@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml"><img src="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
+  <a href="https://github.com/zyphraxns/sponsored-by-meme-generator/actions/workflows/ci.yml"><img src="https://github.com/zyphraxns/sponsored-by-meme-generator/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-57606a.svg" alt="许可证：MIT"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6.svg" alt="TypeScript：strict"></a>
   <br>
@@ -40,8 +40,8 @@
 需要 Node.js ≥ 20。
 
 ```bash
-git clone https://github.com/zyphraxns/sponsored-by.git
-cd sponsored-by
+git clone https://github.com/zyphraxns/sponsored-by-meme-generator.git
+cd sponsored-by-meme-generator
 npm install
 npm run dev          # http://localhost:5173
 ```

@@ -8,7 +8,7 @@ Runs entirely in your browser — no server, no upload, no account.</p>
 </p>
 
 <p align="center">
-  <a href="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml"><img src="https://github.com/zyphraxns/sponsored-by/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/zyphraxns/sponsored-by-meme-generator/actions/workflows/ci.yml"><img src="https://github.com/zyphraxns/sponsored-by-meme-generator/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-57606a.svg" alt="License: MIT"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6.svg" alt="TypeScript: strict"></a>
   <br>
@@ -40,8 +40,8 @@ The interesting part is not the meme — it's that **the same rendering function
 Requires Node.js ≥ 20.
 
 ```bash
-git clone https://github.com/zyphraxns/sponsored-by.git
-cd sponsored-by
+git clone https://github.com/zyphraxns/sponsored-by-meme-generator.git
+cd sponsored-by-meme-generator
 npm install
 npm run dev          # http://localhost:5173
 ```

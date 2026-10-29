@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Design spec and decision log
-    url: https://github.com/zyphraxns/sponsored-by/blob/main/docs/SPEC.md
+    url: https://github.com/zyphraxns/sponsored-by-meme-generator/blob/main/docs/SPEC.md
     about: Why the architecture looks like this — several "why not X" questions are answered here.
   - name: Contributing guide
-    url: https://github.com/zyphraxns/sponsored-by/blob/main/CONTRIBUTING.md
+    url: https://github.com/zyphraxns/sponsored-by-meme-generator/blob/main/CONTRIBUTING.md
     about: Dev setup, verification tooling, and the single-renderer rule.
