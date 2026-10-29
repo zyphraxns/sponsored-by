@@ -6,12 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Fixed
-
-- **Icon previews were clipped or blank.** Every tile forced its SVG into a `0 0 24 24` viewport (simple-icons' convention), so marks with a different viewBox — most of the SVGL ones — rendered as a black square. The tile now adopts each SVG's own viewBox.
-- **Blank tiles when a search returned many results.** All previews were fetched at once and the CDN throttled the burst, leaving silent gaps. Previews now go through a pool of 8 concurrent requests.
-- **Searching in Chinese returned every brand.** The normalised term collapsed to an empty string for non-Latin input, and `String.includes('')` is always true, so everything matched. Empty-normalised queries now return nothing, with a hint that brand names are in English.
-
 ### Added
 
 - **Text next to your own logo.** Uploaded logos get a text label (defaults to the file name) that you can edit in the uploads list at the top of the panel; it renders beside the mark and drives the slot width.
@@ -23,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **Icon previews were clipped or blank.** Every tile forced its SVG into a `0 0 24 24` viewport (simple-icons' convention), so marks with a different viewBox — most of the SVGL ones — rendered as a black square. The tile now adopts each SVG's own viewBox.
+- **Blank tiles when a search returned many results.** All previews were fetched at once and the CDN throttled the burst, leaving silent gaps. Previews now go through a pool of 8 concurrent requests.
+- **Searching in Chinese returned every brand.** The normalised term collapsed to an empty string for non-Latin input, and `String.includes('')` is always true, so everything matched. Empty-normalised queries now return nothing, with a hint that brand names are in English.
 - **Moving any slider dropped every logo** — the async-fetched icon/wordmark assets don't come from the selection state, so rebuilding the scene for ROWS / SPEED / PALETTE silently discarded them, leaving only the typeset names. Rebuilds now carry assets across.
 - **Speed was quadratic, not linear** — the period was already shortened by the speed factor and the scroll offset multiplied by it again (2× behaved as 4×). The offset no longer double-counts.
 - **Loop length was inflated for non-integer periods** — the LCM accumulator started from 1, so `LCM(1, 2.5) = 5` reported a 2.5 s loop as 5 s. Harmless while speeds were integers, wrong the moment 1.6× existed.
@@ -32,6 +29,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The icon button label leaked Chinese ("图标") on the English UI.
 - Two garbage entries (`UGh`, `糖果`) in the emoji quick-pick row.
 - A single hung CDN request could stall the whole prefetch batch; all logo fetches now time out after 8 s.
+- Documentation and repository metadata still pointed at the old repository name after it was renamed to `sponsored-by-meme-generator`. The README (both languages), CONTRIBUTING guide, Issue-template links and `package.json` now use the new URLs, and the published site is at `https://zyphraxns.github.io/sponsored-by-meme-generator/`.
+
+### Changed
+
+- **Layout menu reworked.** The `Inverted` variant is gone — the palette control covers it, and one-click colour switching inside a layout selector was redundant. New copy variants built on the same JSON-patch architecture: **Powered by** on every layout (including `Powered by nothing` on No sponsors, closing the joke), and **Presented by** on Sponsored by. The menu is now nine items where every entry changes something visible.
+- The default layout now uses a light background (`#f5f3ee`) with dark text, so dark brand marks stay visible; the former dark scheme moved to the `inverted` variant.
+- `scripts/cdp-selfcheck.mjs` works on Chrome 132+ again: `--headless=old` was removed upstream, and the initial DevTools target now reports `type: "other"` instead of `"page"`.
 
 ## [0.2.0] - 2026-10-26
 
@@ -47,12 +51,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Editing the title and then moving any slider no longer resets the headline to the layout default.
 - Dragging a slider no longer freezes the animation at `t = 0`, and no longer rebuilds the colour pickers mid-drag.
 - Colour overrides no longer leak across layouts — a custom light background used to follow you into a dark layout.
-
-### Changed
-
-- **Layout menu reworked.** The `Inverted` variant is gone — the palette control covers it, and one-click colour switching inside a layout selector was redundant. New copy variants built on the same JSON-patch architecture: **Powered by** on every layout (including `Powered by nothing` on No sponsors, closing the joke), and **Presented by** on Sponsored by. The menu is now nine items where every entry changes something visible.
-
-- `scripts/cdp-selfcheck.mjs` works on Chrome 132+ again: `--headless=old` was removed upstream, and the initial DevTools target now reports `type: "other"` instead of `"page"`.
 
 ### Known gaps
 
