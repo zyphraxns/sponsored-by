@@ -13,6 +13,7 @@ import type { PlatformId } from './core/presets';
 import { ui } from './i18n';
 import type { Locale, Ratio, SceneState, TickerItem } from './core/types';
 import type { BrandHit } from './core/simple-icons';
+import { encodeShare, decodeShare } from './share-link';
 import { exportGif, gifFilename } from './exporters/gif';
 import { exportPng } from './exporters/png';
 import { pngFilename, svgFilename, svgFileContent, svgToBlob } from './exporters/svg';
@@ -47,6 +48,31 @@ let sel: Selection = {
   speed: 1,
 };
 let state: SceneState = createDefaultState(sel);
+
+// 分享链接：如果 URL 有 #share 参数，解码并重建 sel/state
+(function initShare(): void {
+  const encoded = location.hash.replace(/^#/, '');
+  if (!encoded) return;
+  const decoded = decodeShare('#' + encoded);
+  if (!decoded) return;
+  try {
+    if (decoded.templateId) sel.templateId = decoded.templateId;
+    if (decoded.variantId) sel.variantId = decoded.variantId;
+    if (decoded.locale) sel.locale = decoded.locale;
+    if (decoded.ratio) sel.ratio = decoded.ratio;
+    if (decoded.icons) sel.icons = decoded.icons;
+    if (decoded.text) sel.text = decoded.text;
+    if (decoded.palette) sel.palette = decoded.palette;
+    if (decoded.rows !== undefined) sel.rows = decoded.rows;
+    if (decoded.speed !== undefined) sel.speed = decoded.speed;
+    state = carryAssets(createDefaultState(sel), state);
+    refreshMeta();
+    refreshChrome();
+  } catch {
+    // 无效链接：静默忽略，留在默认状态
+  }
+})();
+
 let loopSeconds = loopSecondsFor(state);
 let start = performance.now();
 
@@ -752,6 +778,37 @@ speedRange?.addEventListener('input', () => {
   const v = quantizeSpeed(parseInt(speedRange.value, 10));
   if (speedVal) speedVal.textContent = speedLabel(v);
   rebuildLive({ speed: v });
+});
+
+// —— 分享链接 ——
+function copyShareLink(): void {
+  // 只序列化可恢复的部分（不含上传内容，见 share-link.ts 注释）
+  const encoded = encodeShare(sel);
+  const url = location.origin + location.pathname + '#' + encoded.replace(/^#/, '');
+  navigator.clipboard?.writeText(url).catch(() => {
+    // 降级：用临时隐藏的 textarea
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+  setStatus('已复制分享链接');
+  // 1 秒后清状态（避免长期显示旧信息）
+  setTimeout(() => setStatus(''), 1500);
+}
+
+const shareBtn = document.getElementById('share-link') as HTMLButtonElement | null;
+shareBtn?.addEventListener('click', () => copyShareLink());
+const randomBtn = document.getElementById('random-btn') as HTMLButtonElement | null;
+randomBtn?.addEventListener('click', () => {
+  import('./random-gen').then((m) => {
+    const r = m.randomOption(state.locale);
+    apply(r as Partial<Selection>);
+  }).catch(() => { /* ignore */ });
 });
 
 // —— 导出 ——
